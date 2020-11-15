@@ -7,25 +7,24 @@ type TypeKind =
   | TypeRef of String
 
 closed typeclass Expr<Phase: Parsed | Typechecked> begin
-  sourceSpan :: Self -> Span
+  sourceSpan :: Self -> Span -> (Foo -> Bar, Int)
 
   [TypeChecked]
   exprType :: Self -> TypeKind
 
 
   type FuncCall = {
-    ident: Spanned String,
-    params: Expr<Phase> List,
+    ident: String,
+    params: Expr<Phase>[],
     [TypeChecked]
-    retType: TypeKind,
+    retType: TypeKind
   }
 
   impl sourceSpan for FuncCall f = f.ident.1
   impl exprType for FuncCall f = f.retType
-
-  ...
-
 end
+
+
 
 typecheck :: Expr<Parsed> -> Expr<TypeChecked>
 typecheck expr =
@@ -35,4 +34,3 @@ typecheck expr =
 
 main () =
 	typecheck (FuncCall { ident: ("foo", (0, 0)), params: [] })
-

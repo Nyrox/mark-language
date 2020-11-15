@@ -5,12 +5,14 @@ use crate::ast::{*};
 pub enum ParsingError {
     UnexpectedEndOfInput,
     UnexpectedToken(Spanned<Token>, Option<Token>),
+    ExpectedFunctionType(Ty),
 }
 
 #[derive(Debug)]
 pub struct Parser<'a> {
     remaining: &'a [Spanned<Token>],
     ast: Ast,
+    last_consumed: Option<&'a Spanned<Token>>,
 }
 
 type ParseFn<T> = fn(&mut Parser) -> Result<T, ParsingError>;
@@ -21,6 +23,7 @@ impl<'a> Parser<'a> {
         Self {
             remaining: input,
             ast: Ast::new(),
+            last_consumed: None,
         }
     }
 }
@@ -32,6 +35,7 @@ impl Parser<'_> {
             return None;
         }
         let ret = &self.remaining[0];
+        self.last_consumed = Some(ret);
         dbg!(ret);
         self.remaining = &self.remaining[1..];
         Some(ret)
@@ -43,6 +47,14 @@ impl Parser<'_> {
         }
 
         Some(&self.remaining[0])
+    }
+
+    pub fn peek2(&self) -> Option<&Spanned<Token>> {
+        if self.remaining.len() < 2 {
+            return None;
+        }
+
+        Some(&self.remaining[1])
     }
 
     pub fn expect_next(&mut self) -> Result<&Spanned<Token>, ParsingError> {
@@ -122,7 +134,7 @@ impl Parser<'_> {
                     let ident = parser.expect_identifier()?;
 
                     let ty = if parser.maybe_expect(&Token::Of).is_some() {
-                        parser.parse_type_sig()?
+                        parser.parse_type()?
                     } else {
                         Ty::Unit
                     };
@@ -133,12 +145,39 @@ impl Parser<'_> {
                 let ty = Ty::Sum(variants);
                 Ok(TypeDeclaration { ident, ty })
             }
+            Spanned(Token::LeftBrace, _) => {
+                Ok(TypeDeclaration { ident, ty: Ty::Record(box self.parse_record_type()?) })
+            }
             _ => {
-                let ty = self.parse_type_sig()?;
+                let ty = self.parse_type()?;
                 Ok(TypeDeclaration { ident, ty })
             }
         }
     }
+
+    pub fn parse_record_type(&mut self) -> Result<Record, ParsingError> {
+        self.expect_token(Token::LeftBrace)?;
+
+        let fields = self.parse_punctuated_list(|parser| {
+            let attr = if parser.maybe_expect(&Token::LeftBracket).is_some() {
+                let attr = parser.expect_identifier()?;
+                parser.expect_token(Token::RightBracket)?;
+                Some(attr)
+            } else {
+                None
+            };
+
+            let ident = parser.expect_identifier()?;
+            parser.expect_token(Token::Colon)?;
+            let ty = parser.parse_type()?;
+            Ok((ident, ty, attr))
+        }, Token::Comma)?;
+        self.expect_token(Token::RightBrace)?;
+
+        Ok(Record {
+            fields
+        })
+    }   
 
     pub fn parse_closed_type_class(&mut self) -> Result<ClosedTypeClass, ParsingError> {
         self.expect_token(Token::Closed)?;
@@ -150,30 +189,67 @@ impl Parser<'_> {
         let value_param = if self.maybe_expect(&Token::Less).is_some() {
             let ident = self.expect_identifier()?;
             self.expect_token(Token::Colon)?;
-            let variants = self.parse_punctuated_list(Self::expect_identifier, Token::Pipe)?;
+            let variants = self.parse_punctuated_list(|parser| parser.expect_identifier(), Token::Pipe)?;
+
+            self.expect_token(Token::Greater)?;
 
             Some((ident, variants))
         } else {
             None
         };
 
+        self.expect_token(Token::Begin)?;
+
         let mut typeclass_items = Vec::new();
         let mut typeclass_members = Vec::new();
-        let mut typeclass_impls = Vec::new();
+        let mut typeclass_member_impls = Vec::new();
 
-        match self.peek().ok_or(ParsingError::UnexpectedEndOfInput)? {
-            Spanned(Token::Identifier(_), _) => {
-                typeclass_items.push((TypeClassItem::Method(self.parse_named_func_sig()), None));
+        loop {
+            match self.peek().ok_or(ParsingError::UnexpectedEndOfInput)? {
+                Spanned(Token::Identifier(_), _) => {
+                    typeclass_items.push((TypeClassItem::Method(self.parse_named_func_sig()?), None));
+                }
+                Spanned(Token::LeftBracket, _) => {
+                    self.expect_next()?;
+                    let attr = self.expect_identifier()?;
+                    self.expect_token(Token::RightBracket)?;
+
+                    typeclass_items.push((TypeClassItem::Method(self.parse_named_func_sig()?), Some(attr)))
+                }
+                Spanned(Token::Type, _) => {
+                    typeclass_members.push(self.parse_type_decl()?);
+                }
+                Spanned(Token::Impl, _) => {
+                    self.expect_next()?;
+
+                    let what = self.expect_identifier()?;
+                    self.expect_token(Token::For)?;
+                    let who = self.expect_identifier()?;
+                    let p =self.expect_identifier()?;
+                    self.expect_token(Token::Equals)?;
+                    
+                    let body = self.parse_expr()?;
+
+                    typeclass_member_impls.push(TypeClassImplItem {
+                        what, who, body: (p, body)
+                    });
+                }
+                Spanned(Token::End, _) => {
+                    self.expect_next()?;
+                    break;
+                }
+                t => return Err(ParsingError::UnexpectedToken(t.clone(), None))
             }
         }
 
-        ClosedTypeClass {
+
+        Ok(ClosedTypeClass {
             ident,
             value_param,
             typeclass_items,
             typeclass_members,
             typeclass_member_impls,
-        }
+        })
     }
 
     pub fn parse_named_func_sig(&mut self) -> Result<NamedFunctionTypeSignature, ParsingError> {
@@ -182,14 +258,65 @@ impl Parser<'_> {
         self.expect_token(Token::Colon)?;
         self.expect_token(Token::Colon)?;
 
-        let ty = self.parse_type_sig()?;
-        if ty.is_function() {
-            NamedFunctionTypeSignature { ident, }
+        let ty = self.parse_type()?;
+        if let Ty::Func(l, r) = ty {
+            Ok(NamedFunctionTypeSignature { ident, from: *l, to: *r })
+        } else {
+            Err(ParsingError::ExpectedFunctionType(ty))
         }
     }
 
-    pub fn parse_type_sig(&mut self) -> Result<Ty, ParsingError> {
-        match self.expect_next()? {
+    pub fn parse_expr(&mut self) -> Result<Expr, ParsingError> {
+        self.parse_expr_bp(0)
+    }
+
+    pub fn parse_expr_bp(&mut self, min_bp: u8) -> Result<Expr, ParsingError> {
+        // basic blocks
+        let mut lhs = match self.expect_next()? {
+            Spanned(Token::Identifier(i), span) => Expr::Symbol(Spanned(i.clone(), *span)),
+            t => return Err(ParsingError::UnexpectedToken(t.clone(), None)),
+        };
+
+        loop {
+            let (t, (l_bp, r_bp)) = match self.peek() {
+                Some(t) if Self::infix_binding_power(t).is_some() => (t.clone(), Self::infix_binding_power(t).unwrap()),
+                _ => break,
+            };
+            if l_bp < min_bp {
+                break;
+            }
+
+            self.expect_next()?;
+
+            // field access
+            if let Spanned(Token::Dot, _) = t {
+                let field = match self.expect_next()? {
+                    Spanned(Token::Identifier(i), span) => Spanned(i.clone(), *span),
+                    Spanned(Token::IntegerLiteral(i), span) => Spanned(i.to_string(), *span),
+                    t => return Err(ParsingError::UnexpectedToken(t.clone(), None)),
+                };
+                lhs = Expr::FieldAccess(box lhs, field);
+            } else {
+                let rhs = self.parse_expr_bp(r_bp)?;
+
+                match t {
+
+                    _ => return Err(ParsingError::UnexpectedToken(t, None))
+                }
+            }
+        }
+
+        // if the next token is on the same line, we try function application
+        // TODO: Improve
+        if self.peek().ok_or(ParsingError::UnexpectedEndOfInput)?.1.0 == self.last_consumed.unwrap().1.0 {
+            panic!()
+        }
+
+        Ok(lhs)
+    }
+
+    pub fn parse_type(&mut self) -> Result<Ty, ParsingError> {
+        let lhs = match self.expect_next()?.clone() {
             Spanned(Token::LeftParen, _) => {
                 // tuple
                 if self.maybe_expect(&Token::RightParen).is_some() {
@@ -197,20 +324,51 @@ impl Parser<'_> {
                 } else {
                     let members = self.parse_punctuated_list(
                         |parser| {
-                            let r = parser.parse_type_sig()?;
+                            let r = parser.parse_type()?;
                             Ok(box r)
                         },
                         Token::Comma,
                     )?;
 
                     self.expect_token(Token::RightParen)?;
-                    Ok(Ty::Tuple(members))
+                    
+                    if members.len() == 1 {
+                        Ok(*members[0].clone())
+                    } else {
+                        Ok(Ty::Tuple(members))
+                    }
                 }
             }
             Spanned(Token::Int, _) => Ok(Ty::Int),
             Spanned(Token::Float, _) => Ok(Ty::Float),
             Spanned(Token::String, _) => Ok(Ty::String),
+            Spanned(Token::Self_, _) => Ok(Ty::TypeRef("Self".to_owned(), None)),
+            Spanned(Token::Identifier(i), _) => {
+                let attr = if self.maybe_expect(&Token::Less).is_some() {
+                    let attr = self.expect_identifier()?;
+                    self.expect_token(Token::Greater)?;
+                    Some(attr)
+                } else { None };
+                
+                Ok(Ty::TypeRef(i.clone(), attr))
+            }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
+        }?;
+
+        if self.maybe_expect(&Token::Minus).is_some() {
+            self.expect_token(Token::Greater)?;
+
+            Ok(Ty::Func(box lhs, box self.parse_type()?))
+        } else if let Some(Spanned(Token::LeftBracket, _)) = self.peek() {
+            if let Some(Spanned(Token::RightBracket, _)) = self.peek2() {
+                self.expect_token(Token::LeftBracket)?;
+                self.expect_token(Token::RightBracket)?;
+                Ok(Ty::List(box lhs))
+            } else {
+                Ok(lhs)
+            }
+        } else{
+            Ok(lhs)
         }
     }
 
@@ -230,5 +388,12 @@ impl Parser<'_> {
         }
 
         Ok(out)
+    }
+
+    pub fn infix_binding_power(t: &Token) -> Option<(u8, u8)> {
+        match t {
+            &Token::Dot => Some((3, 4)),
+            _ => None,
+        }
     }
 }

@@ -1,13 +1,21 @@
 use crate::parser::{Span, Spanned};
 
+
+#[derive(Debug, Clone)]
+pub struct Record {
+	pub fields: Vec<(Spanned<String>, Ty, Option<Attribute>)>,
+}
+
 #[derive(Debug, Clone)]
 pub enum Ty {
     Tuple(Vec<Box<Ty>>),
 	Sum(Vec<(Spanned<String>, Box<Ty>)>),
+	Record(Box<Record>),
 	Annotated(Box<Ty>, Spanned<String>),
     TypeVariable(String),
     Func(Box<Ty>, Box<Ty>),
-    TypeRef(String),
+	TypeRef(String, Option<Spanned<String>>),
+	List(Box<Ty>),
     Unit,
     Int,
 	Float,
@@ -36,15 +44,15 @@ pub enum TypeClassItem {
 pub struct TypeClassImplItem {
 	pub what: Spanned<String>,
 	pub who: Spanned<String>,
-	pub implementation: FunctionDecl,
+	pub body: (Spanned<String>, Expr),
 }
 
-pub type Attribute = String;
+pub type Attribute = Spanned<String>;
 
 #[derive(Debug, Clone)]
 pub struct ClosedTypeClass {
 	pub ident: Spanned<String>,
-	pub value_param: (Spanned<String>, Vec<Spanned<String>>),
+	pub value_param: Option<(Spanned<String>, Vec<Spanned<String>>)>,
 	pub typeclass_items: Vec<(TypeClassItem, Option<Attribute>)>,
 	pub typeclass_members: Vec<TypeDeclaration>,
 	pub typeclass_member_impls: Vec<TypeClassImplItem>,
@@ -60,6 +68,7 @@ pub enum Declaration {
 #[derive(Debug, Clone)]
 pub enum Expr {
 	FieldAccess(Box<Expr>, Spanned<String>),
+	Symbol(Spanned<String>),
 }
 
 #[derive(Debug, Clone)]
