@@ -1,5 +1,5 @@
 use super::{Spanned, Token};
-use crate::ast::{Ast, Declaration, Ty, TypeDeclaration};
+use crate::ast::{*};
 
 #[derive(Debug, Clone)]
 pub enum ParsingError {
@@ -97,38 +97,94 @@ impl Parser<'_> {
     }
 
     pub fn parse_declaration(&mut self) -> Result<Declaration, ParsingError> {
-        match self.expect_next()? {
+        match self.peek().ok_or(ParsingError::UnexpectedEndOfInput)? {
             Spanned(Token::Type, _) => {
-                let ident = self.expect_identifier()?;
-
-                self.expect_token(Token::Equals)?;
-
-                match self.peek().ok_or_else(|| ParsingError::UnexpectedEndOfInput)? {
-                    Spanned(Token::Pipe, _) => {
-                        self.expect_next()?;
-
-                        let variants = self.parse_punctuated_list(|parser| {
-                            let ident = parser.expect_identifier()?;
-
-                            let ty = if parser.maybe_expect(&Token::Of).is_some() {
-                                parser.parse_type_sig()?
-                            } else {
-                                Ty::Unit
-                            };
-
-                            Ok((ident, box ty))
-                        }, Token::Pipe)?;
-
-                        let ty = Ty::Sum(variants);
-                        Ok(Declaration::Type(TypeDeclaration { ident, ty }))
-                    }
-                    _ => {
-                        let ty = self.parse_type_sig()?;
-                        Ok(Declaration::Type(TypeDeclaration { ident, ty }))
-                    }
-                }
+                Ok(Declaration::Type(self.parse_type_decl()?))
+            }
+            Spanned(Token::Closed, _) => {
+                Ok(Declaration::ClosedTypeClass(self.parse_closed_type_class()?))
             }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
+        }
+    }
+
+    pub fn parse_type_decl(&mut self) -> Result<TypeDeclaration, ParsingError> {
+        self.expect_token(Token::Type)?;
+        let ident = self.expect_identifier()?;
+
+        self.expect_token(Token::Equals)?;
+
+        match self.peek().ok_or_else(|| ParsingError::UnexpectedEndOfInput)? {
+            Spanned(Token::Pipe, _) => {
+                self.expect_next()?;
+
+                let variants = self.parse_punctuated_list(|parser| {
+                    let ident = parser.expect_identifier()?;
+
+                    let ty = if parser.maybe_expect(&Token::Of).is_some() {
+                        parser.parse_type_sig()?
+                    } else {
+                        Ty::Unit
+                    };
+
+                    Ok((ident, box ty))
+                }, Token::Pipe)?;
+
+                let ty = Ty::Sum(variants);
+                Ok(TypeDeclaration { ident, ty })
+            }
+            _ => {
+                let ty = self.parse_type_sig()?;
+                Ok(TypeDeclaration { ident, ty })
+            }
+        }
+    }
+
+    pub fn parse_closed_type_class(&mut self) -> Result<ClosedTypeClass, ParsingError> {
+        self.expect_token(Token::Closed)?;
+        self.expect_token(Token::TypeClass)?;
+                
+        let ident = self.expect_identifier()?;
+
+        // value params
+        let value_param = if self.maybe_expect(&Token::Less).is_some() {
+            let ident = self.expect_identifier()?;
+            self.expect_token(Token::Colon)?;
+            let variants = self.parse_punctuated_list(Self::expect_identifier, Token::Pipe)?;
+
+            Some((ident, variants))
+        } else {
+            None
+        };
+
+        let mut typeclass_items = Vec::new();
+        let mut typeclass_members = Vec::new();
+        let mut typeclass_impls = Vec::new();
+
+        match self.peek().ok_or(ParsingError::UnexpectedEndOfInput)? {
+            Spanned(Token::Identifier(_), _) => {
+                typeclass_items.push((TypeClassItem::Method(self.parse_named_func_sig()), None));
+            }
+        }
+
+        ClosedTypeClass {
+            ident,
+            value_param,
+            typeclass_items,
+            typeclass_members,
+            typeclass_member_impls,
+        }
+    }
+
+    pub fn parse_named_func_sig(&mut self) -> Result<NamedFunctionTypeSignature, ParsingError> {
+        let ident = self.expect_identifier()?;
+
+        self.expect_token(Token::Colon)?;
+        self.expect_token(Token::Colon)?;
+
+        let ty = self.parse_type_sig()?;
+        if ty.is_function() {
+            NamedFunctionTypeSignature { ident, }
         }
     }
 

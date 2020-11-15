@@ -3,7 +3,8 @@ use crate::parser::{Span, Spanned};
 #[derive(Debug, Clone)]
 pub enum Ty {
     Tuple(Vec<Box<Ty>>),
-    Sum(Vec<(Spanned<String>, Box<Ty>)>),
+	Sum(Vec<(Spanned<String>, Box<Ty>)>),
+	Annotated(Box<Ty>, Spanned<String>),
     TypeVariable(String),
     Func(Box<Ty>, Box<Ty>),
     TypeRef(String),
@@ -38,11 +39,13 @@ pub struct TypeClassImplItem {
 	pub implementation: FunctionDecl,
 }
 
+pub type Attribute = String;
+
 #[derive(Debug, Clone)]
 pub struct ClosedTypeClass {
 	pub ident: Spanned<String>,
 	pub value_param: (Spanned<String>, Vec<Spanned<String>>),
-	pub typeclass_items: Vec<TypeClassItem>,
+	pub typeclass_items: Vec<(TypeClassItem, Option<Attribute>)>,
 	pub typeclass_members: Vec<TypeDeclaration>,
 	pub typeclass_member_impls: Vec<TypeClassImplItem>,
 }
