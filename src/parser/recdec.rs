@@ -89,7 +89,8 @@ impl Parser<'_> {
                 break;
             }
 
-            self.parse_declaration()?;
+            let decl = self.parse_declaration()?;
+            self.ast.declarations.push(decl);
         }
 
         Ok(self.ast)
@@ -102,9 +103,30 @@ impl Parser<'_> {
 
                 self.expect_token(Token::Equals)?;
 
-                let ty = self.parse_type_sig()?;
+                match self.peek().ok_or_else(|| ParsingError::UnexpectedEndOfInput)? {
+                    Spanned(Token::Pipe, _) => {
+                        self.expect_next()?;
 
-                Ok(Declaration::TypeDeclaration(TypeDeclaration { ident, ty }))
+                        let variants = self.parse_punctuated_list(|parser| {
+                            let ident = parser.expect_identifier()?;
+
+                            let ty = if parser.maybe_expect(&Token::Of).is_some() {
+                                parser.parse_type_sig()?
+                            } else {
+                                Ty::Unit
+                            };
+
+                            Ok((ident, box ty))
+                        }, Token::Pipe)?;
+
+                        let ty = Ty::Sum(variants);
+                        Ok(Declaration::Type(TypeDeclaration { ident, ty }))
+                    }
+                    _ => {
+                        let ty = self.parse_type_sig()?;
+                        Ok(Declaration::Type(TypeDeclaration { ident, ty }))
+                    }
+                }
             }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
         }
@@ -130,6 +152,8 @@ impl Parser<'_> {
                 }
             }
             Spanned(Token::Int, _) => Ok(Ty::Int),
+            Spanned(Token::Float, _) => Ok(Ty::Float),
+            Spanned(Token::String, _) => Ok(Ty::String),
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
         }
     }

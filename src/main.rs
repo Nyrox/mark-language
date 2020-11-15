@@ -11,4 +11,6 @@ fn main() {
     let tokens = Scanner::new(file.chars()).scan_all().unwrap();
 
     let ast = parser::Parser::new(&tokens).parse().unwrap();
+
+    dbg!(ast);
 }

@@ -87,7 +87,8 @@ impl<I: Iterator<Item = char>> Scanner<I> {
             "match" => Some(Token::Match),
             "with" => Some(Token::With),
             "Int" => Some(Token::Int),
-            "Float" => Some(Token::Float),
+			"Float" => Some(Token::Float),
+			"String" => Some(Token::String),
             _ => None,
         }
     }

@@ -9,7 +9,8 @@ pub enum Ty {
     TypeRef(String),
     Unit,
     Int,
-    Float,
+	Float,
+	String,
 }
 
 #[derive(Debug, Clone)]
@@ -19,13 +20,56 @@ pub struct TypeDeclaration {
 }
 
 #[derive(Debug, Clone)]
-pub enum Declaration {
-    TypeDeclaration(TypeDeclaration),
+pub struct NamedFunctionTypeSignature {
+	pub ident: Spanned<String>,
+	pub from: Ty,
+	pub to: Ty,
 }
 
 #[derive(Debug, Clone)]
+pub enum TypeClassItem {
+	Method(NamedFunctionTypeSignature),
+}
+
+#[derive(Debug, Clone)]
+pub struct TypeClassImplItem {
+	pub what: Spanned<String>,
+	pub who: Spanned<String>,
+	pub implementation: FunctionDecl,
+}
+
+#[derive(Debug, Clone)]
+pub struct ClosedTypeClass {
+	pub ident: Spanned<String>,
+	pub value_param: (Spanned<String>, Vec<Spanned<String>>),
+	pub typeclass_items: Vec<TypeClassItem>,
+	pub typeclass_members: Vec<TypeDeclaration>,
+	pub typeclass_member_impls: Vec<TypeClassImplItem>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Declaration {
+	Type(TypeDeclaration),
+	ClosedTypeClass(ClosedTypeClass),
+}
+
+
+#[derive(Debug, Clone)]
+pub enum Expr {
+	FieldAccess(Box<Expr>, Spanned<String>),
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionDecl {
+	ident: Spanned<String>,
+	params: Vec<Spanned<String>>,
+	body: Expr,
+}
+
+
+#[derive(Debug, Clone)]
 pub struct Ast {
-    declarations: Vec<Declaration>,
+    pub declarations: Vec<Declaration>,
 }
 
 impl Ast {

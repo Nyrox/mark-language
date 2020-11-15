@@ -15,6 +15,7 @@ pub enum Token {
     Of,
     TypeClass,
     Self_,
+    String,
 
     Int,
     Float,
