@@ -15,7 +15,7 @@ pub struct Span(pub Position, pub Position);
 impl<T: Copy> Copy for Spanned<T> {}
 
 #[derive(Clone)]
-pub struct Spanned<T>(T, Span);
+pub struct Spanned<T>(pub T, pub Span);
 
 impl<T> std::fmt::Debug for Spanned<T>
 where

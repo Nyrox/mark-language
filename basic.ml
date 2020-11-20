@@ -32,4 +32,4 @@ typecheck expr =
 
 
 main () =
-	typecheck ({ ident: "foo", params: [] }) "bruh"
+	typecheck ({ ident: "foo", params: [] }) "bruh" * typecheck "din mor"

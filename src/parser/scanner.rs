@@ -87,9 +87,9 @@ impl<I: Iterator<Item = char>> Scanner<I> {
             "match" => Some(Token::Match),
             "with" => Some(Token::With),
             "Int" => Some(Token::Int),
-			"Float" => Some(Token::Float),
-			"String" => Some(Token::String),
-			"for" => Some(Token::For),
+            "Float" => Some(Token::Float),
+            "String" => Some(Token::String),
+            "for" => Some(Token::For),
             _ => None,
         }
     }
@@ -132,19 +132,22 @@ impl<I: Iterator<Item = char>> Scanner<I> {
                     Ok(ScanningProduct::Skip)
                 }
                 _ => tok(Token::Slash),
-			},
-			'"' => {
-				let mut string = String::new();
-				loop {
-					match self.advance() {
-						Some('"') => break,
-						Some(c) => string.push(c),
-						None => Err(ScanningError::UnexpectedEndOfFile)?,
-					}
-				};
+            },
+            '"' => {
+                let mut string = String::new();
+                loop {
+                    match self.advance() {
+                        Some('"') => break,
+                        Some(c) => string.push(c),
+                        None => Err(ScanningError::UnexpectedEndOfFile)?,
+                    }
+                }
 
-				Ok(ScanningProduct::Token(Spanned(Token::StringLiteral(string), Span(from, self.position()))))
-			}
+                Ok(ScanningProduct::Token(Spanned(
+                    Token::StringLiteral(string),
+                    Span(from, self.position()),
+                )))
+            }
             '*' => tok(Token::Star),
             ',' => tok(Token::Comma),
             '.' => tok(Token::Dot),
