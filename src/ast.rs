@@ -61,7 +61,9 @@ pub struct ClosedTypeClass {
 #[derive(Debug, Clone)]
 pub enum Declaration {
 	Type(TypeDeclaration),
+	TypeAnnotation(Spanned<String>, Ty),
 	ClosedTypeClass(ClosedTypeClass),
+	Binding(Spanned<String>, Expr),
 }
 
 
@@ -69,6 +71,7 @@ pub enum Declaration {
 pub enum Expr {
 	FieldAccess(Box<Expr>, Spanned<String>),
 	Symbol(Spanned<String>),
+	Lambda(Spanned<String>, Box<Expr>),
 }
 
 #[derive(Debug, Clone)]

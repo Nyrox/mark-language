@@ -28,9 +28,8 @@ end
 
 typecheck :: Expr<Parsed> -> Expr<TypeChecked>
 typecheck expr =
-	match expr with
-	| FuncCall f -> { retType: TypeKind.I32, ..f }
+	{ ident: "Bruh", retType: TypeKind.I32, params: [] }
 
 
 main () =
-	typecheck (FuncCall { ident: ("foo", (0, 0)), params: [] })
+	typecheck (FuncCall { ident: "foo", params: [] })

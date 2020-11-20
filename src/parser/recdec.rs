@@ -90,7 +90,18 @@ impl Parser<'_> {
         } else {
             None
         }
-    }
+	}
+
+	pub fn maybe_expect_identifier(&mut self) -> Option<Spanned<String>> {
+		if let Some(Spanned(Token::Identifier(i), span)) = self.peek() {
+			let i = i.clone();
+			let span= span.clone();
+			self.next();
+			Some(Spanned(i.clone(), span))
+		} else {
+			None
+		}
+	}
 }
 
 /// Parser rules
@@ -115,7 +126,50 @@ impl Parser<'_> {
             }
             Spanned(Token::Closed, _) => {
                 Ok(Declaration::ClosedTypeClass(self.parse_closed_type_class()?))
-            }
+			}
+			Spanned(Token::Identifier(i), span) => {
+				// make borrowchk happy
+				let i = i.clone();
+				let span = span.clone();
+
+				self.expect_next()?;
+
+				if let Some(_) = self.maybe_expect(&Token::Colon) {
+					// type annotation
+					self.expect_token(Token::Colon)?;
+
+					Ok(Declaration::TypeAnnotation(Spanned(i, span), self.parse_type()?))
+				} else {
+					let params = match self.peek().ok_or(ParsingError::UnexpectedEndOfInput)? {
+						Spanned(Token::LeftParen, span) => {
+							let span = span.clone();
+
+							self.expect_next()?;
+							self.expect_token(Token::RightParen)?;
+							vec![Spanned("_".to_owned(), span)]
+						}
+						Spanned(Token::Equals, _) => {
+							vec![]
+						}
+						_ => {
+							let mut params = Vec::new();
+							while let Some(i) = self.maybe_expect_identifier() {
+								params.push(i);
+							}
+							params
+						}
+					};
+
+					self.expect_token(Token::Equals)?;
+
+					let mut expr = self.parse_expr()?;
+					for p in params.into_iter().rev() {
+						expr = Expr::Lambda(p, box expr);
+					}
+
+					Ok(Declaration::Binding(Spanned(i.clone(), span), expr))
+				}
+			}
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
         }
     }
@@ -177,12 +231,12 @@ impl Parser<'_> {
         Ok(Record {
             fields
         })
-    }   
+    }
 
     pub fn parse_closed_type_class(&mut self) -> Result<ClosedTypeClass, ParsingError> {
         self.expect_token(Token::Closed)?;
         self.expect_token(Token::TypeClass)?;
-                
+
         let ident = self.expect_identifier()?;
 
         // value params
@@ -227,7 +281,7 @@ impl Parser<'_> {
                     let who = self.expect_identifier()?;
                     let p =self.expect_identifier()?;
                     self.expect_token(Token::Equals)?;
-                    
+
                     let body = self.parse_expr()?;
 
                     typeclass_member_impls.push(TypeClassImplItem {
@@ -331,7 +385,7 @@ impl Parser<'_> {
                     )?;
 
                     self.expect_token(Token::RightParen)?;
-                    
+
                     if members.len() == 1 {
                         Ok(*members[0].clone())
                     } else {
@@ -349,7 +403,7 @@ impl Parser<'_> {
                     self.expect_token(Token::Greater)?;
                     Some(attr)
                 } else { None };
-                
+
                 Ok(Ty::TypeRef(i.clone(), attr))
             }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
