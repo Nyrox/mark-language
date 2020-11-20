@@ -7,10 +7,10 @@ pub use scanner::Scanner;
 pub use token::Token;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Position(u32, u32);
+pub struct Position(pub u32, pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Span(Position, Position);
+pub struct Span(pub Position, pub Position);
 
 impl<T: Copy> Copy for Spanned<T> {}
 

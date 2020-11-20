@@ -119,7 +119,6 @@ impl<I: Iterator<Item = char>> Scanner<I> {
             '-' => tok(Token::Minus),
             '+' => tok(Token::Plus),
             '\'' => tok(Token::Tick),
-            '"' => tok(Token::QuotMarks),
             '|' => tok(Token::Pipe),
             '[' => tok(Token::LeftBracket),
             ']' => tok(Token::RightBracket),
@@ -133,7 +132,19 @@ impl<I: Iterator<Item = char>> Scanner<I> {
                     Ok(ScanningProduct::Skip)
                 }
                 _ => tok(Token::Slash),
-            },
+			},
+			'"' => {
+				let mut string = String::new();
+				loop {
+					match self.advance() {
+						Some('"') => break,
+						Some(c) => string.push(c),
+						None => Err(ScanningError::UnexpectedEndOfFile)?,
+					}
+				};
+
+				Ok(ScanningProduct::Token(Spanned(Token::StringLiteral(string), Span(from, self.position()))))
+			}
             '*' => tok(Token::Star),
             ',' => tok(Token::Comma),
             '.' => tok(Token::Dot),

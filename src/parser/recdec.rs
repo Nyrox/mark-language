@@ -328,12 +328,43 @@ impl Parser<'_> {
         // basic blocks
         let mut lhs = match self.expect_next()? {
             Spanned(Token::Identifier(i), span) => Expr::Symbol(Spanned(i.clone(), *span)),
+            Spanned(Token::LeftBrace, _) => {
+                let fields = self.parse_punctuated_list(|p| {
+                    let i = p.expect_identifier()?;
+                    p.expect_token(Token::Colon)?;
+                    let e = p.parse_expr()?;
+                    Ok((i, e))
+                }, Token::Comma)?;
+                self.expect_token(Token::RightBrace)?;
+
+                Expr::Record(fields)
+            }
+            Spanned(Token::StringLiteral(i), span) => Expr::StringLiteral(Spanned(i.clone(), *span)),
+            Spanned(Token::LeftBracket, _) => {
+                self.expect_token(Token::RightBracket)?;
+                Expr::ListConstructor()
+            }
+            Spanned(Token::LeftParen, _) => {
+                let e = self.parse_expr()?;
+                self.expect_token(Token::RightParen)?;
+                e
+            }
             t => return Err(ParsingError::UnexpectedToken(t.clone(), None)),
         };
 
         loop {
             let (t, (l_bp, r_bp)) = match self.peek() {
                 Some(t) if Self::infix_binding_power(t).is_some() => (t.clone(), Self::infix_binding_power(t).unwrap()),
+                Some(Spanned(Token::LeftParen, span)) | Some(Spanned(Token::StringLiteral(_), span)) => {
+                    if min_bp > 10 || self.last_consumed.unwrap().1.0.0 != span.0.0 {
+                        break;
+                    }
+
+                    let rhs = self.parse_expr_bp(12)?;
+                    lhs = Expr::Application(box lhs, box rhs);
+
+                    continue;
+                }
                 _ => break,
             };
             if l_bp < min_bp {
@@ -360,11 +391,6 @@ impl Parser<'_> {
             }
         }
 
-        // if the next token is on the same line, we try function application
-        // TODO: Improve
-        if self.peek().ok_or(ParsingError::UnexpectedEndOfInput)?.1.0 == self.last_consumed.unwrap().1.0 {
-            panic!()
-        }
 
         Ok(lhs)
     }

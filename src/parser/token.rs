@@ -28,7 +28,6 @@ pub enum Token {
     RightBracket,
     Pipe,
     Colon,
-    QuotMarks,
     Equals,
     EqualsEquals,
     Comma,
@@ -50,4 +49,5 @@ pub enum Token {
     Identifier(String),
     FloatLiteral(f64),
     IntegerLiteral(i64),
+    StringLiteral(String),
 }

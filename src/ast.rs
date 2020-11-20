@@ -72,6 +72,12 @@ pub enum Expr {
 	FieldAccess(Box<Expr>, Spanned<String>),
 	Symbol(Spanned<String>),
 	Lambda(Spanned<String>, Box<Expr>),
+	Record(Vec<(Spanned<String>, Expr)>),
+	StringLiteral(Spanned<String>),
+	Application(Box<Expr>, Box<Expr>),
+	// TODO
+	ListConstructor(),
+	GroupedExpr(Box<Expr>),
 }
 
 #[derive(Debug, Clone)]

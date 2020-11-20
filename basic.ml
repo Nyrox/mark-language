@@ -32,4 +32,4 @@ typecheck expr =
 
 
 main () =
-	typecheck (FuncCall { ident: "foo", params: [] })
+	typecheck ({ ident: "foo", params: [] }) "bruh"
