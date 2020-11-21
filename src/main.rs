@@ -34,6 +34,12 @@ mod typed {
     }
 
     #[derive(Debug, Clone)]
+    pub struct SumType {
+        pub ident: String,
+        pub variants: Vec<(String, ResolvedType)>,
+    }
+
+    #[derive(Debug, Clone)]
     pub struct RecordType {
         pub fields: Vec<(String, ResolvedType)>,
         pub c_typeclass: Option<Rc<ClosedTypeClass>>,
@@ -44,8 +50,9 @@ mod typed {
         Record(RecordType),
         Function(Box<ResolvedType>, Box<ResolvedType>),
         ClosedTypeClass(Rc<RefCell<ClosedTypeClass>>),
-        Sum(Vec<(String, ResolvedType)>),
+        Sum(Rc<RefCell<SumType>>),
         Tuple(Vec<ResolvedType>),
+        List(Box<ResolvedType>),
         Unit,
         Int,
         Float,
@@ -136,12 +143,63 @@ fn check_type(context: &Context, expr: &Expr, ty: &ResolvedType) -> bool {
             }
             _ => false,
         },
+        Expr::FieldAccess(e, f) => {
+            let l_ty = infer_type(context, &e).unwrap();
+
+            match l_ty {
+                ResolvedType::Sum(st) => {
+                    if let Some(v) = st.borrow().variants.iter().find(|(vn, _)| &vn == &&f.0) {
+                        match (&v.1, ty) {
+                            (ResolvedType::Unit, ResolvedType::Sum(sc)) if sc.borrow().ident == st.borrow().ident => true,
+                            _ => false,
+                        }
+                    } else {
+                        panic!("Field {} does not exist on {:#?}", &f.0, st);
+                    }
+                }
+                _ => panic!("Field access on {:#?} is illegal", l_ty)
+            }
+        }
+        Expr::ListConstructor() => match ty {
+            ResolvedType::List(_) => true,
+            _ => false,
+        }
+        Expr::StringLiteral(_) => match ty {
+            ResolvedType::String => true,
+            _ => false,
+        }
         _ => false,
     }
 }
 
 fn infer_type(context: &Context, expr: &Expr) -> Option<ResolvedType> {
     match expr {
+        Expr::Symbol(s) => {
+            if let Some(t) = context.global.borrow().lookup(&s.0, None) {
+                return Some(t.clone())
+            } else if let Some(t) = context.symbols.get(&s.0) {
+                return Some(t.clone())
+            } else {
+                return None
+            }
+        }
+        Expr::Lambda(_, e) => {
+            Some(ResolvedType::Function(box ResolvedType::Unit, box infer_type(context, e)?))
+        }
+        Expr::Application(lhs, rhs) => {
+            let lhs_ty = infer_type(context, lhs)?;
+
+            match lhs_ty {
+                ResolvedType::Function(a, b) => {
+                    if check_type(context, rhs, &a) {
+                        return Some(*b.clone())
+                    } else {
+                        panic!("Expected {:#?}, found {:#?}", a, rhs);
+                    }
+                },
+                _ => panic!("Tried to apply to non-function value {:#?}", lhs_ty)
+            }
+        }
         _ => None,
     }
 }
@@ -174,11 +232,13 @@ fn generate_c_typeclass_variant(
         .type_aliases
         .insert(typename, ResolvedType::ClosedTypeClass(tc.clone()));
 
-    let ctx = Context {
+    let mut ctx = Context {
         symbols: HashMap::new(),
         global: symbols.clone(),
         parent: None,
     };
+
+    ctx.symbols.insert("Self".to_owned(), ResolvedType::ClosedTypeClass(tc.clone()));
 
     for m in class.typeclass_members.iter() {
         tc.borrow_mut().members.push((
@@ -193,12 +253,13 @@ fn resolve_type(ctx: &Context, ty: &untyped::Ty, variant: Option<&String>) -> ty
         Ty::Tuple(tys) => {
             ResolvedType::Tuple(tys.iter().map(|t| resolve_type(ctx, t, variant)).collect())
         }
-        Ty::Sum(variants) => ResolvedType::Sum(
-            variants
+        Ty::Sum(variants) => ResolvedType::Sum(Rc::new(RefCell::new(SumType {
+            ident: String::new(), // DISGUSTING
+            variants: variants
                 .iter()
                 .map(|(n, t)| (n.to_string(), resolve_type(ctx, t, variant)))
                 .collect(),
-        ),
+        }))),
         Ty::Func(a, b) => ResolvedType::Function(
             box resolve_type(ctx, &a, variant),
             box resolve_type(ctx, &b, variant),
@@ -209,10 +270,10 @@ fn resolve_type(ctx: &Context, ty: &untyped::Ty, variant: Option<&String>) -> ty
                 .fields
                 .iter()
                 .flat_map(|(i, t, a)| {
-                    if a.as_ref().map(|s| &s.0) == variant {
-                        Some((i.0.clone(), resolve_type(ctx, t, variant)))
-                    } else {
+                    if a.is_some() && a.as_ref().map(|s| &s.0) != variant {
                         None
+                    } else {
+                        Some((i.0.clone(), resolve_type(ctx, t, variant)))
                     }
                 })
                 .collect(),
@@ -220,12 +281,17 @@ fn resolve_type(ctx: &Context, ty: &untyped::Ty, variant: Option<&String>) -> ty
         Ty::TypeRef(n, p) => {
             let (n, p) = (n, p.clone().map(|s| s.0.clone()));
 
+            if let Some(t) = ctx.symbols.get(n) {
+                return t.clone();
+            }
+
             ctx.global
                 .borrow()
                 .lookup(n, p.clone())
                 .expect(&format!("Couldn't find {}_p_{:?} in {:#?}", n, p, ctx))
                 .clone()
         }
+        Ty::List(t) => ResolvedType::List(box resolve_type(ctx, t, variant)),
         Ty::Unit => ResolvedType::Unit,
         Ty::Int => ResolvedType::Int,
         Ty::Float => ResolvedType::Float,
@@ -237,7 +303,7 @@ fn resolve_type(ctx: &Context, ty: &untyped::Ty, variant: Option<&String>) -> ty
     }
 }
 
-fn typecheck(ast: Untyped) {
+fn typecheck(ast: Untyped) -> Context<'static> {
     let global_symbols = Rc::new(RefCell::new(GlobalSymbols::new()));
     let mut context = Context {
         symbols: HashMap::new(),
@@ -248,8 +314,15 @@ fn typecheck(ast: Untyped) {
     for d in ast.declarations.into_iter() {
         match d {
             Declaration::Type(ty) => {
-                global_symbols.borrow_mut().type_aliases
-                    .insert(ty.ident.0, resolve_type(&context, &ty.ty, None));
+                let t = resolve_type(&context, &ty.ty, None);
+                if let ResolvedType::Sum(st) = &t {
+                    st.borrow_mut().ident = ty.ident.0.clone();
+                }
+
+                global_symbols
+                    .borrow_mut()
+                    .type_aliases
+                    .insert(ty.ident.0, t);
             }
             Declaration::TypeAnnotation(ident, ty) => {
                 context
@@ -270,7 +343,6 @@ fn typecheck(ast: Untyped) {
                 }
             }
             Declaration::Binding(ident, expr) => {
-                let child_context = context.branch();
                 if let Some(expected) = context.symbols.get(&ident.0) {
                     if !check_type(&context, &expr, &expected) {
                         eprintln!("Typecheck failed: ");
@@ -289,6 +361,8 @@ fn typecheck(ast: Untyped) {
             }
         }
     }
+
+    return context;
 }
 
 fn main() {

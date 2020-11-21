@@ -15,7 +15,7 @@ closed typeclass Expr<Phase: Parsed | TypeChecked> begin
 
   type FuncCall = {
     ident: String,
-    params: Self[],
+    params: String[],
     [TypeChecked]
     retType: TypeKind
   }
@@ -32,4 +32,4 @@ typecheck expr =
 
 
 main () =
-	typecheck ({ ident: "foo", params: [] }) "bruh" * typecheck "din mor"
+	typecheck ({ ident: "foo", params: [] })
