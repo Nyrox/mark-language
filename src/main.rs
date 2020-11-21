@@ -10,7 +10,7 @@ use ast::untyped::{self, *};
 
 mod typed {
     use crate::ast::untyped::{self};
-    use std::{rc::Rc, cell::RefCell};
+    use std::{cell::RefCell, rc::Rc};
 
     #[derive(Debug, Clone)]
     pub struct NamedFuncSig {
@@ -174,38 +174,58 @@ fn generate_c_typeclass_variant(
         .type_aliases
         .insert(typename, ResolvedType::ClosedTypeClass(tc.clone()));
 
-
-    let ctx = Context { symbols: HashMap::new(), global: symbols.clone(), parent: None };
+    let ctx = Context {
+        symbols: HashMap::new(),
+        global: symbols.clone(),
+        parent: None,
+    };
 
     for m in class.typeclass_members.iter() {
-        tc.borrow_mut().members.push((m.ident.0.clone(), resolve_type(&ctx, &m.ty, variant.as_ref())));
+        tc.borrow_mut().members.push((
+            m.ident.0.clone(),
+            resolve_type(&ctx, &m.ty, variant.as_ref()),
+        ));
     }
-
-
-
-
-
-
 }
 
 fn resolve_type(ctx: &Context, ty: &untyped::Ty, variant: Option<&String>) -> typed::ResolvedType {
     match ty {
-        Ty::Tuple(tys) => ResolvedType::Tuple(tys.iter().map(|t| resolve_type(ctx, t, variant)).collect()),
+        Ty::Tuple(tys) => {
+            ResolvedType::Tuple(tys.iter().map(|t| resolve_type(ctx, t, variant)).collect())
+        }
         Ty::Sum(variants) => ResolvedType::Sum(
             variants
                 .iter()
                 .map(|(n, t)| (n.to_string(), resolve_type(ctx, t, variant)))
                 .collect(),
         ),
-        Ty::Func(a, b) => {
-            ResolvedType::Function(box resolve_type(ctx, &a, variant), box resolve_type(ctx, &b, variant))
+        Ty::Func(a, b) => ResolvedType::Function(
+            box resolve_type(ctx, &a, variant),
+            box resolve_type(ctx, &b, variant),
+        ),
+        Ty::Record(record) => ResolvedType::Record(RecordType {
+            c_typeclass: None,
+            fields: record
+                .fields
+                .iter()
+                .flat_map(|(i, t, a)| {
+                    if a.as_ref().map(|s| &s.0) == variant {
+                        Some((i.0.clone(), resolve_type(ctx, t, variant)))
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+        }),
+        Ty::TypeRef(n, p) => {
+            let (n, p) = (n, p.clone().map(|s| s.0.clone()));
+
+            ctx.global
+                .borrow()
+                .lookup(n, p.clone())
+                .expect(&format!("Couldn't find {}_p_{:?} in {:#?}", n, p, ctx))
+                .clone()
         }
-        Ty::TypeRef(n, p) => ctx
-            .global
-            .borrow()
-            .lookup(n, p.clone().map(|s| s.0.clone()))
-            .unwrap()
-            .clone(),
         Ty::Unit => ResolvedType::Unit,
         Ty::Int => ResolvedType::Int,
         Ty::Float => ResolvedType::Float,
@@ -228,12 +248,13 @@ fn typecheck(ast: Untyped) {
     for d in ast.declarations.into_iter() {
         match d {
             Declaration::Type(ty) => {
-                context
-                    .symbols
+                global_symbols.borrow_mut().type_aliases
                     .insert(ty.ident.0, resolve_type(&context, &ty.ty, None));
             }
             Declaration::TypeAnnotation(ident, ty) => {
-                context.symbols.insert(ident.0, resolve_type(&context, &ty, None));
+                context
+                    .symbols
+                    .insert(ident.0, resolve_type(&context, &ty, None));
             }
             Declaration::ClosedTypeClass(tc) => {
                 if let Some((_, variants)) = &tc.value_param {
