@@ -1,15 +1,10 @@
 use crate::parser::{Span, Spanned};
 
-#[derive(Debug, Clone)]
-pub struct Record {
-    pub fields: Vec<(Spanned<String>, Ty, Option<Attribute>)>,
-}
+pub type Attribute = Spanned<String>;
 
 #[derive(Debug, Clone)]
 pub enum Ty {
     Tuple(Vec<Ty>),
-    Sum(Vec<(Spanned<String>, Ty)>),
-    Record(Record),
     TypeVariable(String),
     Func(Box<Ty>, Box<Ty>),
     TypeRef(String, Option<Spanned<String>>),
@@ -20,32 +15,33 @@ pub enum Ty {
     String,
 }
 
-impl Ty {
-    pub fn visit<F, E>(&mut self, f: &mut F) -> Result<(), E>
-    where
-        F: FnMut(&mut Ty) -> Result<(), E>,
-    {
-        f(self)?;
-
-        use Ty::*;
-        match self {
-            Tuple(tys) => tys.iter_mut().map(|t| t.visit(f)).collect(),
-            Sum(tys) => tys.iter_mut().map(|(_, t)| t.visit(f)).collect(),
-            Ty::Record(r) => r.fields.iter_mut().map(|(_, t, _)| t.visit(f)).collect(),
-            Func(l, r) => {
-                l.visit(f)?;
-                r.visit(f)
-            }
-            List(t) => t.visit(f),
-            TypeRef(_, _) | TypeVariable(_) | Unit | Int | Float | String => Ok(()),
-        }
-    }
+#[derive(Debug, Clone)]
+pub struct RecordDeclaration {
+    pub ident: Spanned<String>,
+    pub fields: Vec<(Spanned<String>, Ty, Option<Attribute>)>,
 }
 
 #[derive(Debug, Clone)]
-pub struct TypeDeclaration {
+pub struct SumTypeDeclaration {
     pub ident: Spanned<String>,
-    pub ty: Ty,
+    pub variants: Vec<(Spanned<String>, Ty)>,
+}
+
+#[derive(Debug, Clone)]
+pub enum TypeDeclaration {
+    TypeAlias(Spanned<String>, Ty),
+    Record(RecordDeclaration),
+    Sum(SumTypeDeclaration),
+}
+
+impl TypeDeclaration {
+    pub fn ident(&self) -> Spanned<String> {
+        match self {
+            Self::TypeAlias(ident, _) => ident.clone(),
+            Self::Record(r) => r.ident.clone(),
+            Self::Sum(st) => st.ident.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -66,8 +62,6 @@ pub struct TypeClassImplItem {
     pub who: Spanned<String>,
     pub body: (Spanned<String>, Expr),
 }
-
-pub type Attribute = Spanned<String>;
 
 #[derive(Debug, Clone)]
 pub struct ClosedTypeClass {

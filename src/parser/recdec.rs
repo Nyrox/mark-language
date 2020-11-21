@@ -203,21 +203,22 @@ impl Parser<'_> {
                     Token::Pipe,
                 )?;
 
-                let ty = Ty::Sum(variants);
-                Ok(TypeDeclaration { ident, ty })
+                Ok(TypeDeclaration::Sum(SumTypeDeclaration { variants, ident }))
             }
-            Spanned(Token::LeftBrace, _) => Ok(TypeDeclaration {
+            Spanned(Token::LeftBrace, _) => Ok(TypeDeclaration::Record(RecordDeclaration {
                 ident,
-                ty: Ty::Record(self.parse_record_type()?),
-            }),
+                fields: self.parse_record_fields()?,
+            })),
             _ => {
                 let ty = self.parse_type()?;
-                Ok(TypeDeclaration { ident, ty })
+                Ok(TypeDeclaration::TypeAlias(ident, ty))
             }
         }
     }
 
-    pub fn parse_record_type(&mut self) -> Result<Record, ParsingError> {
+    pub fn parse_record_fields(
+        &mut self,
+    ) -> Result<Vec<(Spanned<String>, Ty, Option<Spanned<String>>)>, ParsingError> {
         self.expect_token(Token::LeftBrace)?;
 
         let fields = self.parse_punctuated_list(
@@ -239,7 +240,7 @@ impl Parser<'_> {
         )?;
         self.expect_token(Token::RightBrace)?;
 
-        Ok(Record { fields })
+        Ok(fields)
     }
 
     pub fn parse_closed_type_class(&mut self) -> Result<ClosedTypeClass, ParsingError> {
