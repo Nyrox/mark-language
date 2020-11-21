@@ -6,7 +6,7 @@ type TypeKind =
   | F32
   | TypeRef of String
 
-closed typeclass Expr<Phase: Parsed | Typechecked> begin
+closed typeclass Expr<Phase: Parsed | TypeChecked> begin
   sourceSpan :: Self -> Span
 
   [TypeChecked]

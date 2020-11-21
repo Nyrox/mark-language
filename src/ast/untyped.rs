@@ -7,10 +7,9 @@ pub struct Record {
 
 #[derive(Debug, Clone)]
 pub enum Ty {
-    Tuple(Vec<Box<Ty>>),
-    Sum(Vec<(Spanned<String>, Box<Ty>)>),
+    Tuple(Vec<Ty>),
+    Sum(Vec<(Spanned<String>, Ty)>),
     Record(Record),
-    Annotated(Box<Ty>, Spanned<String>),
     TypeVariable(String),
     Func(Box<Ty>, Box<Ty>),
     TypeRef(String, Option<Spanned<String>>),
@@ -38,7 +37,6 @@ impl Ty {
                 r.visit(f)
             }
             List(t) => t.visit(f),
-            Annotated(t, _) => t.visit(f),
             TypeRef(_, _) | TypeVariable(_) | Unit | Int | Float | String => Ok(()),
         }
     }

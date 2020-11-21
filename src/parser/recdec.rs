@@ -198,7 +198,7 @@ impl Parser<'_> {
                             Ty::Unit
                         };
 
-                        Ok((ident, box ty))
+                        Ok((ident, ty))
                     },
                     Token::Pipe,
                 )?;
@@ -208,7 +208,7 @@ impl Parser<'_> {
             }
             Spanned(Token::LeftBrace, _) => Ok(TypeDeclaration {
                 ident,
-                ty: Ty::Record(box self.parse_record_type()?),
+                ty: Ty::Record(self.parse_record_type()?),
             }),
             _ => {
                 let ty = self.parse_type()?;
@@ -433,7 +433,7 @@ impl Parser<'_> {
                     let members = self.parse_punctuated_list(
                         |parser| {
                             let r = parser.parse_type()?;
-                            Ok(box r)
+                            Ok(r)
                         },
                         Token::Comma,
                     )?;
@@ -441,7 +441,7 @@ impl Parser<'_> {
                     self.expect_token(Token::RightParen)?;
 
                     if members.len() == 1 {
-                        Ok(*members[0].clone())
+                        Ok(members[0].clone())
                     } else {
                         Ok(Ty::Tuple(members))
                     }

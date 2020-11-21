@@ -6,7 +6,7 @@ type TypeKind =
   | F32
   | TypeRef of String
 
-closed typeclass Expr<Phase: Parsed | Typechecked> begin
+closed typeclass Expr<Phase: Parsed | TypeChecked> begin
   sourceSpan :: Self -> Span -> (Foo -> Bar, Int)
 
   [TypeChecked]
@@ -15,7 +15,7 @@ closed typeclass Expr<Phase: Parsed | Typechecked> begin
 
   type FuncCall = {
     ident: String,
-    params: Expr<Phase>[],
+    params: Self[],
     [TypeChecked]
     retType: TypeKind
   }
