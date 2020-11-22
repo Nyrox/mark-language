@@ -16,7 +16,16 @@ mod typed {
     pub enum TypeDefinition {
         Record(String, RecordType),
         Sum(String, SumType),
-        ClosedTypeClass(String, typed::ClosedTypeClass),
+        ClosedTypeClass(String, ClosedTypeClass),
+    }
+
+    impl TypeDefinition {
+        pub fn assert_typeclass(&mut self) -> &mut ClosedTypeClass {
+            match self {
+                Self::ClosedTypeClass(_, tc) => tc,
+                _ => panic!(),
+            }
+        }
     }
 
     #[derive(Debug, Clone)]
@@ -47,7 +56,6 @@ mod typed {
     #[derive(Debug, Clone)]
     pub struct RecordType {
         pub fields: Vec<(String, ResolvedType)>,
-        pub c_typeclass: Option<Rc<ClosedTypeClass>>,
     }
 
     #[derive(Debug, Clone)]
@@ -118,11 +126,11 @@ fn check_type(context: &Context, expr: &Expr, ty: &ResolvedType) -> bool {
             _ => false,
         },
         Expr::Record(record) => match ty {
-            ResolvedType::TypeIndex(i) => match context.global.borrow().types[*i] {
+            ResolvedType::TypeIndex(i) => match &context.global.borrow().types[*i] {
                 TypeDefinition::Record(_, r) => unimplemented!(),
                 TypeDefinition::ClosedTypeClass(_, tc) => {
-                    'members: for (_, ty) in tc.members.iter() {
-                        if let TypeDefinition::Record(_, r) = ty {
+                    'members: for td in tc.members.iter() {
+                        if let TypeDefinition::Record(_, r) = td {
                             for field in r.fields.iter() {
                                 if let Some(f) = record.iter().find(|(name, e)| &name.0 == &field.0)
                                 {
@@ -147,11 +155,11 @@ fn check_type(context: &Context, expr: &Expr, ty: &ResolvedType) -> bool {
             let l_ty = infer_type(context, &e).unwrap();
 
             match l_ty {
-                ResolvedType::TypeIndex(i) => match context.global.borrow().types[i] {
+                ResolvedType::TypeIndex(i) => match &context.global.borrow().types[i] {
                     TypeDefinition::Sum(_, st) => {
                         if let Some(v) = st.variants.iter().find(|(vn, _)| &vn == &&f.0) {
                             match (&v.1, ty) {
-                                (ResolvedType::Unit, ResolvedType::TypeIndex(j)) if i == j => true,
+                                (ResolvedType::Unit, ResolvedType::TypeIndex(j)) if &i == j => true,
                                 _ => false,
                             }
                         } else {
@@ -180,7 +188,10 @@ fn infer_type(context: &Context, expr: &Expr) -> Option<ResolvedType> {
         Expr::Symbol(s) => {
             if let Some(t) = context.symbols.get(&s.0) {
                 return Some(t.clone());
-            } else {
+            } else if let Some(t) = context.global.borrow().type_aliases.get(&s.0){
+                return Some(t.clone())
+            }
+            else {
                 return None;
             }
         }
@@ -196,6 +207,7 @@ fn infer_type(context: &Context, expr: &Expr) -> Option<ResolvedType> {
                     if check_type(context, rhs, &a) {
                         return Some(*b.clone());
                     } else {
+                        dbg!(context.global.borrow());
                         panic!("Expected {:#?}, found {:#?}", a, rhs);
                     }
                 }
@@ -222,9 +234,11 @@ fn generate_c_typeclass_variant(
         members: Vec::new(),
     };
 
-
     let type_index = symbols.borrow().types.len();
-    symbols.borrow_mut().types.push(TypeDefinition::ClosedTypeClass(typename, tc));
+    symbols
+        .borrow_mut()
+        .types
+        .push(TypeDefinition::ClosedTypeClass(typename.clone(), tc));
 
     symbols
         .borrow_mut()
@@ -237,15 +251,46 @@ fn generate_c_typeclass_variant(
         parent: None,
     };
 
-    symbols.borrow_mut().type_aliases.insert("Self".to_owned(), ResolvedType::TypeIndex(type_index));
+    symbols
+        .borrow_mut()
+        .type_aliases
+        .insert("Self".to_owned(), ResolvedType::TypeIndex(type_index));
 
     for m in class.typeclass_members.iter() {
-        tc.borrow_mut()
+        let td = match m {
+            TypeDeclaration::Record(r) => TypeDefinition::Record(
+                r.ident.0.clone(),
+                RecordType {
+                    fields: r
+                        .fields
+                        .iter()
+                        .flat_map(|(n, t, a)| {
+                            if a.is_some() && a.clone().map(|s| s.0) != variant {
+                                None
+                            } else {
+                                Some((n.0.clone(), resolve_type(&ctx, t, variant.as_ref())))
+                            }
+                        })
+                        .collect(),
+                },
+            ),
+            _ => unimplemented!(),
+        };
+
+        symbols.borrow_mut().types[type_index]
+            .assert_typeclass()
             .members
-            .push((m.ident().0, resolve_type(&ctx, &m.ty, variant.as_ref())));
+            .push(td);
     }
 
     symbols.borrow_mut().type_aliases.remove("Self");
+}
+
+fn full_typename(name: &str, p: Option<String>) -> String {
+    match p {
+        None => name.to_owned(),
+        Some(p) => format!("{}_p_{}", name, p),
+    }
 }
 
 fn resolve_type(ctx: &Context, ty: &untyped::Ty, variant: Option<&String>) -> typed::ResolvedType {
@@ -266,8 +311,9 @@ fn resolve_type(ctx: &Context, ty: &untyped::Ty, variant: Option<&String>) -> ty
 
             ctx.global
                 .borrow()
-                .lookup(n, p.clone())
-                .expect(&format!("Couldn't find {}_p_{:?} in {:#?}", n, p, ctx))
+                .type_aliases
+                .get(&full_typename(n, p))
+                .unwrap()
                 .clone()
         }
         Ty::List(t) => ResolvedType::List(box resolve_type(ctx, t, variant)),
@@ -292,17 +338,55 @@ fn typecheck(ast: Untyped) -> Context<'static> {
 
     for d in ast.declarations.into_iter() {
         match d {
-            Declaration::Type(ty) => {
-                let t = resolve_type(&context, &ty.ty, None);
-                if let ResolvedType::Sum(st) = &t {
-                    st.borrow_mut().ident = ty.ident.0.clone();
-                }
+            Declaration::Type(ty) => match ty {
+                TypeDeclaration::Sum(st) => {
+                    let td = TypeDefinition::Sum(
+                        st.ident.0.clone(),
+                        SumType {
+                            variants: st
+                                .variants
+                                .iter()
+                                .map(|(v, t)| (v.0.clone(), resolve_type(&context, t, None)))
+                                .collect(),
+                        },
+                    );
 
-                global_symbols
-                    .borrow_mut()
-                    .type_aliases
-                    .insert(ty.ident.0, t);
-            }
+                    let mut symbols = global_symbols.borrow_mut();
+                    let ti = symbols.types.len();
+                    symbols.types.push(td);
+                    symbols
+                        .type_aliases
+                        .insert(st.ident.0.clone(), ResolvedType::TypeIndex(ti));
+                }
+                TypeDeclaration::TypeAlias(n, t) => {
+                    global_symbols
+                        .borrow_mut()
+                        .type_aliases
+                        .insert(n.0.clone(), resolve_type(&context, &t, None));
+                }
+                TypeDeclaration::Record(r) => {
+                    let td = TypeDefinition::Record(
+                        r.ident.0.clone(),
+                        RecordType {
+                            fields: r
+                                .fields
+                                .iter()
+                                .map(|(n, t, a)| {
+                                    assert!(a.is_none());
+                                    (n.0.clone(), resolve_type(&context, t, None))
+                                })
+                                .collect(),
+                        },
+                    );
+
+                    let mut symbols = global_symbols.borrow_mut();
+                    let ti = symbols.types.len();
+                    symbols.types.push(td);
+                    symbols
+                        .type_aliases
+                        .insert(r.ident.0.clone(), ResolvedType::TypeIndex(ti));
+                }
+            },
             Declaration::TypeAnnotation(ident, ty) => {
                 context
                     .symbols
@@ -356,4 +440,5 @@ fn main() {
     let typechecked = typecheck(ast);
 
     dbg!(typechecked);
+    println!("Success!");
 }
