@@ -10,6 +10,7 @@ pub mod ast;
 use ast::typed::*;
 use ast::untyped::{self, *};
 
+pub mod interpret;
 pub mod typecheck;
 
 fn main() {
@@ -23,6 +24,5 @@ fn main() {
 
     let typechecked = typecheck::typecheck(ast);
 
-    dbg!(typechecked);
-    println!("Success!");
+    interpret::interpret(typechecked.unwrap());
 }

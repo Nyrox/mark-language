@@ -1,4 +1,4 @@
-use crate::parser::{Span, Spanned};
+use crate::parser::{Position, Span, Spanned};
 
 pub type Attribute = Spanned<String>;
 
@@ -89,6 +89,24 @@ pub enum Expr {
     ListConstructor(),
     GroupedExpr(Box<Expr>),
     BinaryOp(Operator, Box<Expr>, Box<Expr>),
+}
+
+impl Expr {
+    pub fn span(&self) -> Span {
+        use Expr::*;
+
+        match self {
+            FieldAccess(e, s) => e.span().encompass(s.1),
+            Symbol(s) => s.1,
+            Lambda(p, e) => p.1.encompass(e.span()),
+            Record(fields) => Span(Position(0, 0), Position(0, 0)),
+            StringLiteral(s) => s.1,
+            Application(l, r) => l.span().encompass(r.span()),
+            ListConstructor() => Span(Position(0, 0), Position(0, 0)),
+            GroupedExpr(e) => e.span(),
+            BinaryOp(o, e, r) => e.span().encompass(r.span()),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

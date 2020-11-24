@@ -102,6 +102,8 @@ pub enum ExprT {
     Record(Vec<TypedExpr>),
     ListConstructor(),
     VariantConstructor(TypeHandle, usize),
+    Application(Box<TypedExpr>, Box<TypedExpr>),
+    Symbol(String),
 }
 
 pub type TypedExpr = (ExprT, ResolvedType);

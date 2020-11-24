@@ -6,11 +6,17 @@ pub use recdec::Parser;
 pub use scanner::Scanner;
 pub use token::Token;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Position(pub u32, pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span(pub Position, pub Position);
+
+impl Span {
+    pub fn encompass(self, other: Span) -> Span {
+        Self(self.0.min(other.0), self.1.max(other.1))
+    }
+}
 
 impl<T: Copy> Copy for Spanned<T> {}
 

@@ -4,6 +4,7 @@ use crate::{
         typed::*,
         untyped::{self, Declaration, Ty},
     },
+    parser::Span,
     parser::Spanned,
 };
 
@@ -14,8 +15,10 @@ use std::{collections::HashMap, rc::Rc};
 pub enum TypeCheckingError {
     UnknownType(Spanned<String>),
     MissingTypeAnnotation(Spanned<String>),
-    TypeMismatch(Spanned<String>, ResolvedType),
+    TypeMismatch(Span, ResolvedType, Option<ResolvedType>),
     IllegalFieldAccess(Spanned<String>, String),
+    ExpectedFunctionType(Span),
+    UnknownSymbol(Spanned<String>),
 }
 
 #[derive(Debug, Clone)]
@@ -79,10 +82,10 @@ fn check_type(
                                         if let Some(e) = check_type(ctx, &f.1, &field.1) {
                                             sorted_fields.push(e);
                                         } else {
-											continue 'records;
+                                            continue 'records;
                                         }
                                     } else {
-										continue 'records;
+                                        continue 'records;
                                     }
                                 }
 
@@ -119,6 +122,49 @@ fn check_type(
 
 fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<TypedExpr> {
     match expr {
+        Expr::Symbol(s) => ctx
+            .symbols
+            .get(&s.0)
+            .map(|t| (ExprT::Symbol(s.0.clone()), t.clone()))
+            .or_else(|| {
+                ctx.errors.push(TypeCheckingError::UnknownSymbol(s.clone()));
+                None
+            }),
+        Expr::Lambda(p, e) => {
+            ctx.symbols.insert(p.0.clone(), ResolvedType::ErrType);
+
+            let r = infer_type(ctx, e);
+
+            ctx.symbols.remove(&p.0);
+            let r = r?;
+            let e = ExprT::Lambda(p.0.clone(), box (r.0, r.1.clone()));
+            let t = ResolvedType::Function(box ResolvedType::Unit, box r.1);
+
+            Some((e, t))
+        }
+        Expr::Application(lhs, rhs) => {
+            if let (lt, ResolvedType::Function(a, b)) = infer_type(ctx, lhs)? {
+                if let Some(rt) = check_type(ctx, rhs, &a) {
+                    return Some((
+                        ExprT::Application(box (lt, ResolvedType::Function(a, b.clone())), box rt),
+                        (*b).clone(),
+                    ));
+                } else {
+                    let err = TypeCheckingError::TypeMismatch(
+                        rhs.span(),
+                        (*b).clone(),
+                        infer_type(ctx, rhs).map(|(_, t)| t),
+                    );
+
+                    ctx.errors.push(err);
+                    return None;
+                }
+            } else {
+                ctx.errors
+                    .push(TypeCheckingError::ExpectedFunctionType(lhs.span()));
+                return None;
+            }
+        }
         Expr::FieldAccess(e, f) => {
             if let Expr::Symbol(s) = &**e {
                 let th = ctx.environment.borrow().type_aliases.get(&s.0).cloned();
@@ -161,7 +207,10 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
 
             None
         }
-        _ => None,
+        _ => {
+            dbg!("Excuse me?", expr);
+            None
+        }
     }
 }
 
@@ -314,18 +363,21 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
             Declaration::Binding(ident, expr) => {
                 if let Some(expected) = checking_context.symbols.get(&ident.0).cloned() {
                     if let Some(e) = check_type(&mut checking_context, &expr, &expected) {
-                        bindings.insert(ident.0.clone(), e);
+                        bindings.insert(ident.0.clone(), e.clone());
+                        checking_context.symbols.insert(ident.0.clone(), e.1);
                     } else {
-                        checking_context
-                            .errors
-                            .push(TypeCheckingError::TypeMismatch(
-                                ident.clone(),
-                                expected.clone(),
-                            ));
+                        let err = TypeCheckingError::TypeMismatch(
+                            ident.1,
+                            expected.clone(),
+                            infer_type(&mut checking_context, &expr).map(|(_, t)| t),
+                        );
+
+                        checking_context.errors.push(err);
                     }
                 } else {
                     if let Some(e) = infer_type(&mut checking_context, &expr) {
-                        bindings.insert(ident.0.clone(), e);
+                        bindings.insert(ident.0.clone(), e.clone());
+                        checking_context.symbols.insert(ident.0.clone(), e.1);
                     } else {
                         checking_context
                             .errors
