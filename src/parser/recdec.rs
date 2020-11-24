@@ -451,8 +451,8 @@ impl Parser<'_> {
             Spanned(Token::Int, _) => Ok(Ty::Int),
             Spanned(Token::Float, _) => Ok(Ty::Float),
             Spanned(Token::String, _) => Ok(Ty::String),
-            Spanned(Token::Self_, _) => Ok(Ty::TypeRef("Self".to_owned(), None)),
-            Spanned(Token::Identifier(i), _) => {
+            Spanned(Token::Self_, span) => Ok(Ty::TypeRef(Spanned("Self".into(), span), None)),
+            Spanned(Token::Identifier(i), span) => {
                 let attr = if self.maybe_expect(&Token::Less).is_some() {
                     let attr = self.expect_identifier()?;
                     self.expect_token(Token::Greater)?;
@@ -461,7 +461,7 @@ impl Parser<'_> {
                     None
                 };
 
-                Ok(Ty::TypeRef(i.clone(), attr))
+                Ok(Ty::TypeRef(Spanned(i.clone(), span), attr))
             }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
         }?;

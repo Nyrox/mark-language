@@ -7,7 +7,7 @@ pub enum Ty {
     Tuple(Vec<Ty>),
     TypeVariable(String),
     Func(Box<Ty>, Box<Ty>),
-    TypeRef(String, Option<Spanned<String>>),
+    TypeRef(Spanned<String>, Option<Spanned<String>>),
     List(Box<Ty>),
     Unit,
     Int,
