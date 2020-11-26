@@ -78,7 +78,8 @@ fn check_type(
                             if let TypeDefinition::Record { fields, .. } = t {
                                 let mut sorted_fields = Vec::new();
                                 for field in fields.iter() {
-                                    if let Some(f) = rc.iter().find(|(name, e)| &name.0 == &field.0)
+                                    if let Some(f) =
+                                        rc.iter().find(|(name, _e)| &name.0 == &field.0)
                                     {
                                         if let Some(e) = check_type(ctx, &f.1, &field.1) {
                                             sorted_fields.push(e);
@@ -99,7 +100,7 @@ fn check_type(
                     TypeDefinition::Record { fields, .. } => {
                         let mut sorted_fields = Vec::new();
                         for field in fields.iter() {
-                            if let Some(f) = rc.iter().find(|(name, e)| &name.0 == &field.0) {
+                            if let Some(f) = rc.iter().find(|(name, _e)| &name.0 == &field.0) {
                                 if let Some(e) = check_type(ctx, &f.1, &field.1) {
                                     sorted_fields.push(e);
                                 } else {
@@ -180,7 +181,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                             if let Some((i, v)) = variants
                                 .iter()
                                 .enumerate()
-                                .find(|(i, (vn, _))| &vn == &&f.0)
+                                .find(|(_i, (vn, _))| &vn == &&f.0)
                             {
                                 return Some((
                                     ExprT::VariantConstructor(th.clone(), i),
@@ -216,7 +217,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                     match ctx.environment.borrow().types[th.index].clone() {
                         TypeDefinition::Record { fields, .. } => {
                             if let Some((i, (_, ft))) =
-                                fields.iter().enumerate().find(|(i, (s, _))| s == &f.0)
+                                fields.iter().enumerate().find(|(_i, (s, _))| s == &f.0)
                             {
                                 Some((
                                     ExprT::FieldAccess(

@@ -100,12 +100,12 @@ impl Expr {
             FieldAccess(e, s) => e.span().encompass(s.1),
             Symbol(s) => s.1,
             Lambda(p, e) => p.1.encompass(e.span()),
-            Record(fields) => Span(Position(0, 0), Position(0, 0)),
+            Record(_fields) => Span(Position(0, 0), Position(0, 0)),
             StringLiteral(s) => s.1,
             Application(l, r) => l.span().encompass(r.span()),
             ListConstructor() => Span(Position(0, 0), Position(0, 0)),
             GroupedExpr(e) => e.span(),
-            BinaryOp(o, e, r) => e.span().encompass(r.span()),
+            BinaryOp(_o, e, r) => e.span().encompass(r.span()),
             Unit(s) => *s,
         }
     }

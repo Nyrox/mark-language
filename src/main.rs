@@ -2,13 +2,10 @@
 #![feature(let_chains)]
 
 pub mod parser;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use parser::Scanner;
 
 pub mod ast;
-use ast::typed::*;
-use ast::untyped::{self, *};
 
 pub mod interpret;
 pub mod typecheck;

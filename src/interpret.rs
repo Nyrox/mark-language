@@ -28,15 +28,15 @@ impl Interpreter {
     }
 
     pub fn call_fn(&mut self, f: &str) {
-        let (e, t) = self.program.bindings.get(f).unwrap();
-        if let ExprT::Lambda(p, body) = e.clone() {
+        let (e, _t) = self.program.bindings.get(f).unwrap();
+        if let ExprT::Lambda(_p, body) = e.clone() {
             self.eval_expr(&body)
         } else {
             panic!("Tried to call non function value {:?}", e);
         }
     }
 
-    pub fn eval_expr(&mut self, (expr, et): &TypedExpr) {
+    pub fn eval_expr(&mut self, (expr, _et): &TypedExpr) {
         match expr {
             ExprT::Application(lhs, rhs) => {
                 self.eval_expr(lhs);
@@ -98,7 +98,7 @@ impl Interpreter {
             ExprT::VariantConstructor(th, vi) => {
                 let t = self.program.environment.borrow().types[th.index].clone();
                 if let TypeDefinition::Sum { variants, .. } = t {
-                    let (n, vt) = &variants[*vi];
+                    let (_n, vt) = &variants[*vi];
                     if let ResolvedType::Unit = vt {
                         self.push_val(Value::Variant(th.clone(), *vi, box Value::Unit));
                     } else {
