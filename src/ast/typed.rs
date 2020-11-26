@@ -104,6 +104,8 @@ pub enum ExprT {
     VariantConstructor(TypeHandle, usize),
     Application(Box<TypedExpr>, Box<TypedExpr>),
     Symbol(String),
+    FieldAccess(Box<TypedExpr>, usize),
+    Unit,
 }
 
 pub type TypedExpr = (ExprT, ResolvedType);

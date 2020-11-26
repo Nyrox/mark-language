@@ -369,10 +369,15 @@ impl Parser<'_> {
                 self.expect_token(Token::RightBracket)?;
                 Expr::ListConstructor()
             }
-            Spanned(Token::LeftParen, _) => {
-                let e = self.parse_expr()?;
-                self.expect_token(Token::RightParen)?;
-                e
+            Spanned(Token::LeftParen, span) => {
+                let span = *span;
+                if let Some(Spanned(_, end_span)) = self.maybe_expect(&Token::RightParen) {
+                    Expr::Unit(span.encompass(*end_span))
+                } else {
+                    let e = self.parse_expr()?;
+                    self.expect_token(Token::RightParen)?;
+                    e
+                }
             }
             t => return Err(ParsingError::UnexpectedToken(t.clone(), None)),
         };
@@ -383,6 +388,7 @@ impl Parser<'_> {
                     (t.clone(), Self::infix_binding_power(t).unwrap())
                 }
                 Some(Spanned(Token::LeftParen, span))
+                | Some(Spanned(Token::Identifier(_), span))
                 | Some(Spanned(Token::StringLiteral(_), span)) => {
                     if min_bp > 10 || self.last_consumed.unwrap().1 .0 .0 != span.0 .0 {
                         break;

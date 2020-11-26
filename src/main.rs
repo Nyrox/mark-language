@@ -22,7 +22,13 @@ fn main() {
 
     // dbg!(&ast);
 
-    let typechecked = typecheck::typecheck(ast);
+    let typechecked = match typecheck::typecheck(ast) {
+        Ok(t) => t,
+        Err(errs) => {
+            dbg!(errs);
+            return;
+        }
+    };
 
-    interpret::interpret(typechecked.unwrap());
+    interpret::interpret(typechecked);
 }

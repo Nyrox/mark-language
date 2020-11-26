@@ -89,6 +89,7 @@ pub enum Expr {
     ListConstructor(),
     GroupedExpr(Box<Expr>),
     BinaryOp(Operator, Box<Expr>, Box<Expr>),
+    Unit(Span),
 }
 
 impl Expr {
@@ -105,6 +106,7 @@ impl Expr {
             ListConstructor() => Span(Position(0, 0), Position(0, 0)),
             GroupedExpr(e) => e.span(),
             BinaryOp(o, e, r) => e.span().encompass(r.span()),
+            Unit(s) => *s,
         }
     }
 }

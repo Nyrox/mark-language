@@ -28,8 +28,41 @@ end
 
 typecheck :: Expr<Parsed> -> Expr<TypeChecked>
 typecheck expr =
-	{ ident: "Bruh", retType: TypeKind.I32, params: [] }
+	{ ident: "bruh", retType: TypeKind.I32, params: [] }
+
+
+type Test = {
+  str: String
+}
+
+create_rec :: String -> Test
+create_rec blah =
+  { str: blah }
+
+
+//main () =
+//    (create_rec "din mor").str
+
+
+type Test2 = {
+  a: String,
+  b: String
+}
+
+type Test3 = {
+  a: String,
+  b: String,
+  c: String
+}
+
+test :: String -> String -> Test2
+test a b =
+  { a: a, b: b }
+
+test_curry :: (String -> Test2) -> String -> Test3
+test_curry f c =
+  { a: (f "two").a, b: (f "two").b, c: c }
 
 
 main () =
-	typecheck ({ ident: "foo", params: [] })
+  test_curry (test "one") "three"

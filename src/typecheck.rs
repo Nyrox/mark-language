@@ -2,7 +2,7 @@ use crate::{
     ast::untyped::{Expr, TypeDeclaration},
     ast::{
         typed::*,
-        untyped::{self, Declaration, Ty},
+        untyped::{self, Declaration, RecordDeclaration, Ty},
     },
     parser::Span,
     parser::Spanned,
@@ -19,6 +19,7 @@ pub enum TypeCheckingError {
     IllegalFieldAccess(Spanned<String>, String),
     ExpectedFunctionType(Span),
     UnknownSymbol(Spanned<String>),
+    IllegalAttributeLocation(Span),
 }
 
 #[derive(Debug, Clone)]
@@ -95,28 +96,32 @@ fn check_type(
 
                         None
                     }
+                    TypeDefinition::Record { fields, .. } => {
+                        let mut sorted_fields = Vec::new();
+                        for field in fields.iter() {
+                            if let Some(f) = rc.iter().find(|(name, e)| &name.0 == &field.0) {
+                                if let Some(e) = check_type(ctx, &f.1, &field.1) {
+                                    sorted_fields.push(e);
+                                } else {
+                                    panic!()
+                                }
+                            } else {
+                                panic!();
+                            }
+                        }
+
+                        return Some((ExprT::Record(sorted_fields), ty.clone()));
+                    }
                     _ => None,
                 }
             }
-            _ => None,
-        },
-        Expr::FieldAccess(_, _) => {
-            let (e, t) = infer_type(ctx, expr)?;
-            if &t == ty {
-                Some((e, t))
-            } else {
-                None
-            }
-        }
-        Expr::StringLiteral(s) => match ty {
-            ResolvedType::String => Some((ExprT::StringLiteral(s.0.clone()), ty.clone())),
             _ => None,
         },
         Expr::ListConstructor() => match ty {
             ResolvedType::List(_) => Some((ExprT::ListConstructor(), ty.clone())),
             _ => None,
         },
-        _ => None,
+        _ => infer_type(ctx, expr),
     }
 }
 
@@ -152,7 +157,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                 } else {
                     let err = TypeCheckingError::TypeMismatch(
                         rhs.span(),
-                        (*b).clone(),
+                        (*a).clone(),
                         infer_type(ctx, rhs).map(|(_, t)| t),
                     );
 
@@ -166,6 +171,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
             }
         }
         Expr::FieldAccess(e, f) => {
+            // VARIANT CONSTRUCTORS
             if let Expr::Symbol(s) = &**e {
                 let th = ctx.environment.borrow().type_aliases.get(&s.0).cloned();
                 if let Some(ResolvedType::TypeHandle(th)) = th.clone() {
@@ -205,8 +211,44 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                 }
             }
 
-            None
+            match infer_type(ctx, e)? {
+                (te, ResolvedType::TypeHandle(th)) => {
+                    match ctx.environment.borrow().types[th.index].clone() {
+                        TypeDefinition::Record { fields, .. } => {
+                            if let Some((i, (_, ft))) =
+                                fields.iter().enumerate().find(|(i, (s, _))| s == &f.0)
+                            {
+                                Some((
+                                    ExprT::FieldAccess(
+                                        box (te, ResolvedType::TypeHandle(th.clone())),
+                                        i,
+                                    ),
+                                    ft.clone(),
+                                ))
+                            } else {
+                                panic!()
+                            }
+                        }
+                        _ => {
+                            ctx.errors.push(TypeCheckingError::IllegalFieldAccess(
+                                Spanned("not a record type".to_owned(), e.span()),
+                                f.0.clone(),
+                            ));
+                            return None;
+                        }
+                    }
+                }
+                _ => {
+                    ctx.errors.push(TypeCheckingError::IllegalFieldAccess(
+                        Spanned("not a user type".to_owned(), e.span()),
+                        f.0.clone(),
+                    ));
+                    return None;
+                }
+            }
         }
+        Expr::Unit(_) => Some((ExprT::Unit, ResolvedType::Unit)),
+        Expr::StringLiteral(s) => Some((ExprT::StringLiteral(s.0.clone()), ResolvedType::String)),
         _ => {
             dbg!("Excuse me?", expr);
             None
@@ -260,6 +302,25 @@ fn typecheck_type_decl(ctx: &mut TypecheckingContext, ty: untyped::TypeDeclarati
                     .variants
                     .iter()
                     .map(|(v, t)| (v.0.clone(), resolve_type(ctx, t)))
+                    .collect(),
+            };
+
+            ctx.insert_type_def(td);
+        }
+        TypeDeclaration::Record(RecordDeclaration { ident, fields }) => {
+            let qualified_name = Rc::new(ident.0.clone());
+
+            let td = TypeDefinition::Record {
+                qualified_name,
+                fields: fields
+                    .iter()
+                    .map(|(n, t, a)| {
+                        if let Some(a) = a {
+                            ctx.errors
+                                .push(TypeCheckingError::IllegalAttributeLocation(a.1))
+                        }
+                        (n.0.clone(), resolve_type(ctx, t))
+                    })
                     .collect(),
             };
 

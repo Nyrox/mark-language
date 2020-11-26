@@ -9,7 +9,7 @@ pub use token::Token;
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Position(pub u32, pub u32);
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Span(pub Position, pub Position);
 
 impl Span {
@@ -20,17 +20,14 @@ impl Span {
 
 impl<T: Copy> Copy for Spanned<T> {}
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Spanned<T>(pub T, pub Span);
 
-impl<T> std::fmt::Debug for Spanned<T>
-where
-    T: std::fmt::Debug,
-{
+impl std::fmt::Debug for Span {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "Span [{}:{}, {}:{}], Item: {:?}",
-            self.1 .0 .0, self.1 .0 .1, self.1 .1 .0, self.1 .1 .1, self.0
+            "Span [{}:{}, {}:{}]",
+            self.0 .0, self.0 .1, self.1 .0, self.1 .1
         ))
     }
 }
