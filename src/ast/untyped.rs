@@ -89,6 +89,7 @@ pub enum Expr {
     ListConstructor(),
     GroupedExpr(Box<Expr>),
     BinaryOp(Operator, Box<Expr>, Box<Expr>),
+    LetBinding(Spanned<String>, Box<Expr>, Box<Expr>),
     Unit(Span),
 }
 
@@ -105,6 +106,7 @@ impl Expr {
             Application(l, r) => l.span().encompass(r.span()),
             ListConstructor() => Span(Position(0, 0), Position(0, 0)),
             GroupedExpr(e) => e.span(),
+            LetBinding(p, r, b) => p.1.encompass(r.span().encompass(b.span())),
             BinaryOp(_o, e, r) => e.span().encompass(r.span()),
             Unit(s) => *s,
         }

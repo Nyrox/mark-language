@@ -68,6 +68,23 @@ fn check_type(
             }
             _ => None,
         },
+        Expr::LetBinding(binding, rhs, body) => {
+            let (rhs, rhs_t) = infer_type(ctx, rhs).or_else(|| {
+                ctx.errors
+                    .push(TypeCheckingError::MissingTypeAnnotation(binding.clone()));
+                Some((ExprT::Unit, ResolvedType::ErrType))
+            })?;
+
+            ctx.symbols.insert(binding.0.clone(), rhs_t.clone());
+            let body = check_type(ctx, body, ty)?;
+            ctx.symbols.remove(&binding.0);
+
+            let rt = (
+                ExprT::LetBinding(binding.0.clone(), box (rhs, rhs_t), box body),
+                ty.clone(),
+            );
+            Some(rt)
+        }
         Expr::Record(rc) => match ty {
             ResolvedType::TypeHandle(i) => {
                 let t = ctx.environment.borrow().types[i.index].clone();
@@ -122,12 +139,40 @@ fn check_type(
             ResolvedType::List(_) => Some((ExprT::ListConstructor(), ty.clone())),
             _ => None,
         },
-        _ => infer_type(ctx, expr),
+        _ => {
+            let (e, t) = infer_type(ctx, expr)?;
+            if &t == ty {
+                Some((e, t))
+            } else {
+                ctx.errors.push(TypeCheckingError::TypeMismatch(
+                    expr.span(),
+                    ty.clone(),
+                    Some(t),
+                ));
+                None
+            }
+        }
     }
 }
 
 fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<TypedExpr> {
     match expr {
+        Expr::LetBinding(binding, rhs, body) => {
+            let (rhs, rhs_t) = infer_type(ctx, rhs).or_else(|| {
+                ctx.errors
+                    .push(TypeCheckingError::MissingTypeAnnotation(binding.clone()));
+                None
+            })?;
+
+            ctx.symbols.insert(binding.0.clone(), rhs_t.clone());
+            let body = infer_type(ctx, body)?;
+            ctx.symbols.remove(&binding.0);
+
+            Some((
+                ExprT::LetBinding(binding.0.clone(), box (rhs, rhs_t), box body.clone()),
+                body.1.clone(),
+            ))
+        }
         Expr::Symbol(s) => ctx
             .symbols
             .get(&s.0)
@@ -137,7 +182,9 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                 None
             }),
         Expr::Lambda(p, e) => {
-            ctx.symbols.insert(p.0.clone(), ResolvedType::ErrType);
+            if &p.0 == "()" {
+                ctx.symbols.insert(p.0.clone(), ResolvedType::Unit);
+            }
 
             let r = infer_type(ctx, e);
 

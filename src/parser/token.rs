@@ -37,6 +37,7 @@ pub enum Token {
     Minus,
     Star,
     Slash,
+    BackSlash,
     Less,
     LessEq,
     Greater,

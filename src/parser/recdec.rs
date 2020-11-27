@@ -348,6 +348,21 @@ impl Parser<'_> {
         // basic blocks
         let mut lhs = match self.expect_next()? {
             Spanned(Token::Identifier(i), span) => Expr::Symbol(Spanned(i.clone(), *span)),
+            Spanned(Token::Let, span) => {
+                let ident = self.expect_identifier()?;
+                self.expect_token(Token::Equals)?;
+                let bind_val = self.parse_expr()?;
+                let body = self.parse_expr()?;
+                return Ok(Expr::LetBinding(ident, box bind_val, box body));
+            }
+            Spanned(Token::BackSlash, _) => {
+                let p = self.expect_identifier()?;
+                self.expect_token(Token::Minus)?;
+                self.expect_token(Token::Greater)?;
+                let body = self.parse_expr()?;
+
+                return Ok(Expr::Lambda(p, box body));
+            }
             Spanned(Token::LeftBrace, _) => {
                 let fields = self.parse_punctuated_list(
                     |p| {

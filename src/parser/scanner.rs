@@ -123,6 +123,7 @@ impl<I: Iterator<Item = char>> Scanner<I> {
             '[' => tok(Token::LeftBracket),
             ']' => tok(Token::RightBracket),
             ':' => tok(Token::Colon),
+            '\\' => tok(Token::BackSlash),
             '/' => match peeked {
                 Some('/') => {
                     while self.advance().ok_or(ScanningError::UnexpectedEndOfFile)? != '\n' {}

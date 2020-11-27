@@ -61,8 +61,17 @@ test a b =
 
 test_curry :: (String -> Test2) -> String -> Test3
 test_curry f c =
-  { a: (f "two").a, b: (f "two").b, c: c }
+	let r = f "two"
+  	{ a: r.a, b: r.b, c: c }
 
 
 main () =
-  test_curry (test "one") "three"
+	let b =
+		let r = "cyka"
+		r
+
+	test_curry (\a ->
+		{ a: a, b: "blyat" }
+	) b
+
+

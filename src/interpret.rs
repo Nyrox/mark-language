@@ -38,24 +38,32 @@ impl Interpreter {
 
     pub fn eval_expr(&mut self, (expr, _et): &TypedExpr) {
         match expr {
+            ExprT::LetBinding(binding, rhs, body) => {
+                self.eval_expr(rhs);
+                let rv = self.pop_val().unwrap();
+                self.bindings.insert(binding.clone(), rv);
+
+                self.eval_expr(body);
+                self.bindings.remove(binding);
+            }
             ExprT::Application(lhs, rhs) => {
                 self.eval_expr(lhs);
 
                 if let Some(Value::Function(p, curried, body)) = self.pop_val() {
+                    // scoping
+                    self.eval_expr(rhs);
+                    let rv = self.pop_val().unwrap();
+                    let bindings_tmp = self.bindings.clone();
+                    self.bindings.clear();
+
                     for (i, e) in curried.clone() {
                         self.bindings.insert(i, e);
                     }
-
-                    self.eval_expr(rhs);
-                    let rv = self.pop_val().unwrap();
                     self.bindings.insert(p.clone(), rv);
 
                     self.eval_expr(&body);
 
-                    self.bindings.remove(&p);
-                    for (i, _) in curried {
-                        self.bindings.remove(&i);
-                    }
+                    self.bindings = bindings_tmp;
                 } else {
                     dbg!(lhs, &self.stack, &self.bindings);
                     panic!("Not good")
