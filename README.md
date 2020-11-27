@@ -1,6 +1,6 @@
 Experimenting with advanced type systems
 
-Current progress: This program typechecks
+Current progress: This program **runs**
 
 ```ml
 type Span = (Int, Int, ())
@@ -29,14 +29,39 @@ closed typeclass Expr<Phase: Parsed | TypeChecked> begin
   impl exprType for FuncCall f = f.retType
 end
 
-
-
 typecheck :: Expr<Parsed> -> Expr<TypeChecked>
 typecheck expr =
-	{ ident: "Bruh", retType: TypeKind.I32, params: [] }
+	{ ident: "bruh", retType: TypeKind.I32, params: [] }
+
+
+type Test2 = {
+  a: String,
+  b: String
+}
+
+type Test3 = {
+  a: String,
+  b: String,
+  c: String
+}
+
+test :: String -> String -> Test2
+test a b =
+  { a: a, b: b }
+
+test_curry :: (String -> Test2) -> String -> Test3
+test_curry f c =
+	let r = f "two"
+  	{ a: r.a, b: r.b, c: c }
 
 
 main () =
-	typecheck ({ ident: "foo", params: [] })
+	let b =
+		let r = "cyka"
+		r
+
+	test_curry (\a ->
+		{ a: a, b: "blyat" }
+	) b
 
 ```

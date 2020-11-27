@@ -24,24 +24,9 @@ closed typeclass Expr<Phase: Parsed | TypeChecked> begin
   impl exprType for FuncCall f = f.retType
 end
 
-
-
 typecheck :: Expr<Parsed> -> Expr<TypeChecked>
 typecheck expr =
 	{ ident: "bruh", retType: TypeKind.I32, params: [] }
-
-
-type Test = {
-  str: String
-}
-
-create_rec :: String -> Test
-create_rec blah =
-  { str: blah }
-
-
-//main () =
-//    (create_rec "din mor").str
 
 
 type Test2 = {
