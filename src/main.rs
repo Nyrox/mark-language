@@ -1,5 +1,6 @@
 #![feature(box_syntax)]
 #![feature(let_chains)]
+#![feature(iterator_fold_self)]
 
 pub mod parser;
 

@@ -389,9 +389,13 @@ impl Parser<'_> {
                 if let Some(Spanned(_, end_span)) = self.maybe_expect(&Token::RightParen) {
                     Expr::Unit(span.encompass(*end_span))
                 } else {
-                    let e = self.parse_expr()?;
+                    let exprs = self.parse_punctuated_list(|p| p.parse_expr(), Token::Comma)?;
                     self.expect_token(Token::RightParen)?;
-                    e
+                    if exprs.len() == 1 {
+                        exprs.into_iter().next().unwrap()
+                    } else {
+                        Expr::Tuple(exprs)
+                    }
                 }
             }
             t => return Err(ParsingError::UnexpectedToken(t.clone(), None)),

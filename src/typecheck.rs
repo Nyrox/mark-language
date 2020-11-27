@@ -59,6 +59,18 @@ fn check_type(
     ty: &ResolvedType,
 ) -> Option<TypedExpr> {
     match expr {
+        Expr::Tuple(exprs) => match ty {
+            ResolvedType::Tuple(tys) => {
+                let exprs = exprs
+                    .iter()
+                    .zip(tys.iter())
+                    .map(|(e, t)| check_type(ctx, e, t))
+                    .collect::<Option<Vec<_>>>()?;
+
+                Some((ExprT::Tuple(exprs), ty.clone()))
+            }
+            _ => None,
+        },
         Expr::Lambda(p, e) => match ty {
             ResolvedType::Function(a, b) => {
                 ctx.symbols.insert(p.0.clone(), *a.clone());
@@ -285,6 +297,38 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                             return None;
                         }
                     }
+                }
+                (te, ResolvedType::Tuple(tys)) => {
+                    let index: usize = f.parse().ok().or_else(|| {
+                        ctx.errors.push(TypeCheckingError::IllegalFieldAccess(
+                            Spanned(
+                                "expected field access on a tuple to be an integer value".into(),
+                                e.span(),
+                            ),
+                            f.0.clone(),
+                        ));
+                        None
+                    })?;
+
+                    if index >= tys.len() {
+                        ctx.errors.push(TypeCheckingError::IllegalFieldAccess(
+                            Spanned(
+                                format!(
+                                    "field index on tuple {:?}[{}] is out of bounds",
+                                    tys, index
+                                ),
+                                e.span(),
+                            ),
+                            f.0.clone(),
+                        ));
+                        return None;
+                    }
+
+                    let t = tys[index].clone();
+                    Some((
+                        ExprT::FieldAccess(box (te, ResolvedType::Tuple(tys)), index),
+                        t,
+                    ))
                 }
                 _ => {
                     ctx.errors.push(TypeCheckingError::IllegalFieldAccess(

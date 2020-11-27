@@ -38,6 +38,14 @@ impl Interpreter {
 
     pub fn eval_expr(&mut self, (expr, _et): &TypedExpr) {
         match expr {
+            ExprT::Tuple(exprs) => {
+                let mut vals = Vec::new();
+                for e in exprs {
+                    self.eval_expr(e);
+                    vals.push(self.pop_val().unwrap());
+                }
+                self.push_val(Value::Tuple(vals));
+            }
             ExprT::LetBinding(binding, rhs, body) => {
                 self.eval_expr(rhs);
                 let rv = self.pop_val().unwrap();

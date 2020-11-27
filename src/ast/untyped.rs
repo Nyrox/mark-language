@@ -83,6 +83,7 @@ pub enum Expr {
     Symbol(Spanned<String>),
     Lambda(Spanned<String>, Box<Expr>),
     Record(Vec<(Spanned<String>, Expr)>),
+    Tuple(Vec<Expr>),
     StringLiteral(Spanned<String>),
     Application(Box<Expr>, Box<Expr>),
     // TODO
@@ -108,6 +109,11 @@ impl Expr {
             GroupedExpr(e) => e.span(),
             LetBinding(p, r, b) => p.1.encompass(r.span().encompass(b.span())),
             BinaryOp(_o, e, r) => e.span().encompass(r.span()),
+            Tuple(fields) => fields
+                .iter()
+                .map(|e| e.span())
+                .fold_first(|s1, s2| s1.encompass(s2))
+                .unwrap(),
             Unit(s) => *s,
         }
     }

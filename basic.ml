@@ -29,34 +29,16 @@ typecheck expr =
 	{ ident: "bruh", retType: TypeKind.I32, params: [] }
 
 
-type Test2 = {
-  a: String,
-  b: String
-}
+test_curry :: String -> String -> () -> (String, String)
+test_curry a b =
+  \_ -> (a, b)
 
-type Test3 = {
-  a: String,
-  b: String,
-  c: String
-}
-
-test :: String -> String -> Test2
-test a b =
-  { a: a, b: b }
-
-test_curry :: (String -> Test2) -> String -> Test3
-test_curry f c =
-	let r = f "two"
-  	{ a: r.a, b: r.b, c: c }
-
+test :: (() -> (String, String)) -> String -> (String, String, String)
+test f c =
+	let r = f ()
+  (r.0, r.1, c)
 
 main () =
-	let b =
-		let r = "cyka"
-		r
-
-	test_curry (\a ->
-		{ a: a, b: "blyat" }
-	) b
+	test (test_curry "din" "mor") "gey"
 
 

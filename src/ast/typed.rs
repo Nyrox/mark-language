@@ -106,6 +106,7 @@ pub enum ExprT {
     Symbol(String),
     FieldAccess(Box<TypedExpr>, usize),
     LetBinding(String, Box<TypedExpr>, Box<TypedExpr>),
+    Tuple(Vec<TypedExpr>),
     Unit,
 }
 
