@@ -40,7 +40,17 @@ test f c =
 	(r.0, r.1, c)
 
 
-main () =
-	test (test_curry "din" "mor") "gey"
+type SOption =
+	| Some of String
+	| None
 
+
+main :: () -> String
+main () =
+	// test (test_curry "din" "mor") "gey"
+	// let opt = SOption.Some "din mor"
+	let opt = SOption.None
+	match opt with
+	| Some s -> (test (test_curry "din" "mor") s).2
+	| None -> "Wasn't"
 

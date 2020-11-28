@@ -91,6 +91,10 @@ pub enum Expr {
     GroupedExpr(Box<Expr>),
     BinaryOp(Operator, Box<Expr>, Box<Expr>),
     LetBinding(Spanned<String>, Box<Expr>, Box<Expr>),
+    Match(
+        Box<Expr>,
+        Vec<(Spanned<String>, Option<Spanned<String>>, Expr)>,
+    ),
     Unit(Span),
 }
 
@@ -114,6 +118,10 @@ impl Expr {
                 .map(|e| e.span())
                 .fold_first(|s1, s2| s1.encompass(s2))
                 .unwrap(),
+            Match(expr, arms) => arms
+                .iter()
+                .map(|(_, _, e)| e.span())
+                .fold(expr.span(), |acc, s| acc.encompass(s)),
             Unit(s) => *s,
         }
     }

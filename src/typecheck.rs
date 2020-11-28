@@ -20,6 +20,7 @@ pub enum TypeCheckingError {
     ExpectedFunctionType(Span),
     UnknownSymbol(Spanned<String>),
     IllegalAttributeLocation(Span),
+    GenericError(String, Span),
 }
 
 #[derive(Debug, Clone)]
@@ -71,6 +72,70 @@ fn check_type(
             }
             _ => None,
         },
+        Expr::Match(matchee, arms) => {
+            let (matchee_te, matched_ty) = infer_type(ctx, matchee)?;
+
+            match &matched_ty {
+                ResolvedType::TypeHandle(i) => {
+                    let t = ctx.environment.borrow().types[i.index].clone();
+                    if let TypeDefinition::Sum {
+                        variants,
+                        qualified_name,
+                    } = t
+                    {
+                        let mut t_arms = Vec::new();
+                        for (variant, binding, body) in arms {
+                            if let Some((i, (vn, vt))) = variants
+                                .iter()
+                                .enumerate()
+                                .find(|(_, (vn, _))| vn == &variant.0)
+                            {
+                                binding.iter().for_each(|binding| {
+                                    ctx.symbols.insert(binding.0.clone(), vt.clone());
+                                });
+
+                                t_arms.push((
+                                    i,
+                                    binding.clone().map(|s| s.0),
+                                    check_type(ctx, body, ty)?,
+                                ));
+
+                                binding.iter().for_each(|binding| {
+                                    ctx.symbols.remove(&binding.0.clone());
+                                });
+                            } else {
+                                ctx.errors.push(TypeCheckingError::GenericError(
+                                    format!(
+                                        "variant {} does not exist on type {}",
+                                        &variant.0, qualified_name
+                                    ),
+                                    variant.1,
+                                ));
+                                return None;
+                            }
+                        }
+
+                        Some((
+                            ExprT::MatchSum(box (matchee_te, matched_ty), t_arms),
+                            ty.clone(),
+                        ))
+                    } else {
+                        ctx.errors.push(TypeCheckingError::GenericError(
+                            "matching on this type is not possible".into(),
+                            matchee.span(),
+                        ));
+                        None
+                    }
+                }
+                _ => {
+                    ctx.errors.push(TypeCheckingError::GenericError(
+                        "matching on this type is not possible".into(),
+                        matchee.span(),
+                    ));
+                    None
+                }
+            }
+        }
         Expr::Lambda(p, e) => match ty {
             ResolvedType::Function(a, b) => {
                 ctx.symbols.insert(p.0.clone(), *a.clone());

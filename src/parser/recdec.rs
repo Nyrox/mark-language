@@ -355,6 +355,24 @@ impl Parser<'_> {
                 let body = self.parse_expr()?;
                 return Ok(Expr::LetBinding(ident, box bind_val, box body));
             }
+            Spanned(Token::Match, _) => {
+                let expr = self.parse_expr()?;
+                self.expect_token(Token::With)?;
+
+                let mut arms = Vec::new();
+                while let Some(tpipe) = self.maybe_expect(&Token::Pipe) {
+                    let variant = self.expect_identifier()?;
+                    let binding = self.maybe_expect_identifier();
+
+                    self.expect_token(Token::Minus)?;
+                    self.expect_token(Token::Greater)?;
+
+                    let body = self.parse_expr()?;
+                    arms.push((variant, binding, body));
+                }
+
+                return Ok(Expr::Match(box expr, arms));
+            }
             Spanned(Token::BackSlash, _) => {
                 let p = self.expect_identifier()?;
                 self.expect_token(Token::Minus)?;

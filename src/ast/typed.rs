@@ -108,6 +108,7 @@ pub enum ExprT {
     LetBinding(String, Box<TypedExpr>, Box<TypedExpr>),
     Tuple(Vec<TypedExpr>),
     Unit,
+    MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
 }
 
 pub type TypedExpr = (ExprT, ResolvedType);

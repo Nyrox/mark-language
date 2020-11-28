@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use crate::{ast::typed::TypedExpr, ast::typed::*, typecheck::TypeChecked};
 
@@ -9,6 +9,7 @@ pub enum Value {
     Function(String, Vec<(String, Value)>, TypedExpr),
     String(String),
     Variant(TypeHandle, usize, Box<Value>),
+    VariantConstructorFn(TypeHandle, usize),
 }
 
 #[derive(Debug)]
@@ -54,10 +55,36 @@ impl Interpreter {
                 self.eval_expr(body);
                 self.bindings.remove(binding);
             }
+            ExprT::MatchSum(matchee, arms) => {
+                self.eval_expr(matchee);
+
+                if let Some(Value::Variant(th, vi, val)) = self.pop_val() {
+                    for (arm_i, binding, body) in arms {
+                        if *arm_i == vi {
+                            binding.iter().for_each(|binding| {
+                                self.bindings.insert(binding.clone(), *val.clone());
+                            });
+
+                            self.eval_expr(body);
+
+                            binding.iter().for_each(|binding| {
+                                self.bindings.remove(binding);
+                            });
+
+                            return;
+                        }
+                    }
+
+                    panic!()
+                } else {
+                    panic!()
+                }
+            }
             ExprT::Application(lhs, rhs) => {
                 self.eval_expr(lhs);
 
-                if let Some(Value::Function(p, curried, body)) = self.pop_val() {
+                let top = self.pop_val();
+                if let Some(Value::Function(p, curried, body)) = top {
                     // scoping
                     self.eval_expr(rhs);
                     let rv = self.pop_val().unwrap();
@@ -72,6 +99,10 @@ impl Interpreter {
                     self.eval_expr(&body);
 
                     self.bindings = bindings_tmp;
+                } else if let Some(Value::VariantConstructorFn(th, vi)) = top {
+                    self.eval_expr(rhs);
+                    let rv = self.pop_val().unwrap();
+                    self.push_val(Value::Variant(th.clone(), vi, box rv));
                 } else {
                     dbg!(lhs, &self.stack, &self.bindings);
                     panic!("Not good")
@@ -118,7 +149,7 @@ impl Interpreter {
                     if let ResolvedType::Unit = vt {
                         self.push_val(Value::Variant(th.clone(), *vi, box Value::Unit));
                     } else {
-                        panic!()
+                        self.push_val(Value::VariantConstructorFn(th.clone(), *vi));
                     }
                 } else {
                     panic!()
