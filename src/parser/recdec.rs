@@ -355,6 +355,15 @@ impl Parser<'_> {
                 let body = self.parse_expr()?;
                 return Ok(Expr::LetBinding(ident, box bind_val, box body));
             }
+            Spanned(Token::If, _) => {
+                let cond = self.parse_expr()?;
+                self.expect_token(Token::Then)?;
+                let consequent = self.parse_expr()?;
+                self.expect_token(Token::Else)?;
+                let alternate = self.parse_expr()?;
+
+                Expr::Conditional(box cond, box consequent, box alternate)
+            }
             Spanned(Token::Match, _) => {
                 let expr = self.parse_expr()?;
                 self.expect_token(Token::With)?;
@@ -401,6 +410,8 @@ impl Parser<'_> {
             Spanned(Token::IntegerLiteral(i), span) => {
                 Expr::IntegerLiteral(Spanned(i.clone(), *span))
             }
+            Spanned(Token::True, span) => Expr::BooleanLiteral(Spanned(true, *span)),
+            Spanned(Token::False, span) => Expr::BooleanLiteral(Spanned(false, *span)),
             Spanned(Token::LeftBracket, _) => {
                 self.expect_token(Token::RightBracket)?;
                 Expr::ListConstructor()
@@ -465,6 +476,8 @@ impl Parser<'_> {
                         Token::Slash => Operator::BinOpDiv,
                         Token::Plus => Operator::BinOpAdd,
                         Token::Minus => Operator::BinOpSub,
+                        Token::Greater => Operator::BinOpGreater,
+                        Token::Less => Operator::BinOpLess,
                         _ => Err(ParsingError::UnexpectedToken(t, None))?,
                     },
                     box lhs,
@@ -503,6 +516,7 @@ impl Parser<'_> {
             Spanned(Token::Int, _) => Ok(Ty::Int),
             Spanned(Token::Float, _) => Ok(Ty::Float),
             Spanned(Token::String, _) => Ok(Ty::String),
+            Spanned(Token::Bool, _) => Ok(Ty::Bool),
             Spanned(Token::Self_, span) => Ok(Ty::TypeRef(Spanned("Self".into(), span), None)),
             Spanned(Token::Identifier(i), span) => {
                 let attr = if self.maybe_expect(&Token::Less).is_some() {
@@ -555,11 +569,14 @@ impl Parser<'_> {
 
     pub fn infix_binding_power(t: &Token) -> Option<(u8, u8)> {
         match t {
-            &Token::Dot => Some((5, 6)),
-            &Token::Star => Some((3, 4)),
-            &Token::Slash => Some((3, 4)),
-            &Token::Plus => Some((2, 3)),
-            &Token::Minus => Some((2, 3)),
+            &Token::Dot => Some((10, 11)),
+            &Token::Star => Some((6, 7)),
+            &Token::Slash => Some((6, 7)),
+            &Token::Plus => Some((4, 5)),
+            &Token::Minus => Some((4, 5)),
+
+            &Token::Less => Some((1, 2)),
+            &Token::Greater => Some((1, 2)),
             _ => None,
         }
     }

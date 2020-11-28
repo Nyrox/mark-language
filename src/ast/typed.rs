@@ -92,6 +92,7 @@ pub enum ResolvedType {
     Int,
     Float,
     String,
+    Bool,
     ErrType, // indicates that type checking previously failed
 }
 
@@ -111,6 +112,8 @@ pub enum ExprT {
     MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
     BinaryOp(untyped::Operator, Box<TypedExpr>, Box<TypedExpr>),
     IntegerLiteral(i64),
+    BooleanLiteral(bool),
+    Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
 }
 
 pub type TypedExpr = (ExprT, ResolvedType);

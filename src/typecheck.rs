@@ -60,6 +60,13 @@ fn check_type(
     ty: &ResolvedType,
 ) -> Option<TypedExpr> {
     match expr {
+        Expr::Conditional(cond, cons, alt) => {
+            let cond = check_type(ctx, cond, &ResolvedType::Bool)?;
+            let cons = check_type(ctx, cons, ty)?;
+            let alt = check_type(ctx, alt, ty)?;
+
+            Some((ExprT::Conditional(box cond, box cons, box alt), ty.clone()))
+        }
         Expr::Tuple(exprs) => match ty {
             ResolvedType::Tuple(tys) => {
                 let exprs = exprs
@@ -234,6 +241,15 @@ fn check_type(
 
 fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<TypedExpr> {
     match expr {
+        Expr::Conditional(cond, cons, alt) => {
+            let cond = check_type(ctx, cond, &ResolvedType::Bool)?;
+            let cons = infer_type(ctx, cons)?;
+
+            let ct = cons.1.clone();
+            let alt = check_type(ctx, alt, &ct)?;
+
+            Some((ExprT::Conditional(box cond, box cons, box alt), ct))
+        }
         Expr::BinaryOp(op, lhs, rhs) => {
             let lhs = infer_type(ctx, lhs)?;
             let rhs = infer_type(ctx, rhs)?;
@@ -247,6 +263,9 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                     | Operator::BinOpSub
                     | Operator::BinOpDiv => {
                         Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Int))
+                    }
+                    Operator::BinOpLess | Operator::BinOpGreater => {
+                        Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Bool))
                     }
                     _ => None,
                 },
@@ -426,6 +445,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
         Expr::Unit(_) => Some((ExprT::Unit, ResolvedType::Unit)),
         Expr::StringLiteral(s) => Some((ExprT::StringLiteral(s.0.clone()), ResolvedType::String)),
         Expr::IntegerLiteral(i) => Some((ExprT::IntegerLiteral(i.0), ResolvedType::Int)),
+        Expr::BooleanLiteral(b) => Some((ExprT::BooleanLiteral(b.0), ResolvedType::Bool)),
         _ => {
             dbg!("Excuse me?", expr);
             None
@@ -459,6 +479,7 @@ fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> ResolvedType
         Ty::Int => ResolvedType::Int,
         Ty::Float => ResolvedType::Float,
         Ty::String => ResolvedType::String,
+        Ty::Bool => ResolvedType::Bool,
         _ => {
             eprintln!("Error while trying to resolve type: {:?}", ty);
             ResolvedType::ErrType

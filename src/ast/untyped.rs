@@ -13,6 +13,7 @@ pub enum Ty {
     Int,
     Float,
     String,
+    Bool,
 }
 
 #[derive(Debug, Clone)]
@@ -78,6 +79,8 @@ pub enum Operator {
     BinOpDiv,
     BinOpAdd,
     BinOpSub,
+    BinOpGreater,
+    BinOpLess,
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +91,7 @@ pub enum Expr {
     Record(Vec<(Spanned<String>, Expr)>),
     Tuple(Vec<Expr>),
     StringLiteral(Spanned<String>),
+    BooleanLiteral(Spanned<bool>),
     IntegerLiteral(Spanned<i64>),
     Application(Box<Expr>, Box<Expr>),
     // TODO
@@ -99,6 +103,7 @@ pub enum Expr {
         Box<Expr>,
         Vec<(Spanned<String>, Option<Spanned<String>>, Expr)>,
     ),
+    Conditional(Box<Expr>, Box<Expr>, Box<Expr>),
     Unit(Span),
 }
 
@@ -111,6 +116,7 @@ impl Expr {
             IntegerLiteral(i) => i.1,
             Symbol(s) => s.1,
             Lambda(p, e) => p.1.encompass(e.span()),
+            BooleanLiteral(b) => b.1,
             Record(_fields) => Span(Position(0, 0), Position(0, 0)),
             StringLiteral(s) => s.1,
             Application(l, r) => l.span().encompass(r.span()),
@@ -118,6 +124,9 @@ impl Expr {
             GroupedExpr(e) => e.span(),
             LetBinding(p, r, b) => p.1.encompass(r.span().encompass(b.span())),
             BinaryOp(_o, e, r) => e.span().encompass(r.span()),
+            Conditional(cond, cons, alt) => {
+                cond.span().encompass(cons.span()).encompass(alt.span())
+            }
             Tuple(fields) => fields
                 .iter()
                 .map(|e| e.span())

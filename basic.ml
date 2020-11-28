@@ -57,7 +57,7 @@ type SList =
 	| Cons of (String, SList)
 	| End
 
-main_lists () =
+main_slists () =
 	let list = SList.Cons ("mor", SList.Cons ("din", SList.End))
 	list
 
@@ -70,5 +70,34 @@ test_nums_ops () =
 	(5 - 2) * double 7 + 3 * 7 + 9 / 2
 
 
+test_cond :: Int -> Int
+test_cond i =
+	if i > 5 then
+		i + i
+	else
+		i * i
+
+
+type Op =
+	| Add of Int
+	| Sub of Int
+
+type OpList =
+	| Cons of (Op, OpList)
+	| Nil
+
+apply_op :: Op -> Int -> Int
+apply_op op a =
+	match op with
+	| Add b -> a + b
+	| Sub b -> a - b
+
+apply :: OpList -> Int -> Int
+apply oplist init =
+	match oplist with
+	| Cons cons -> apply (cons.1) (apply_op (cons.0) init)
+	| Nil -> init
+
 main () =
-	test_nums_ops ()
+	let ops = OpList.Cons (Op.Add 5, OpList.Cons (Op.Sub 3, OpList.Cons (Op.Add 7, OpList.Nil)))
+	apply ops 10

@@ -46,6 +46,9 @@ pub enum Token {
 
     Void,
     Return,
+    True,
+    False,
+    Bool,
 
     Identifier(String),
     FloatLiteral(f64),

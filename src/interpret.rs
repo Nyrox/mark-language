@@ -116,6 +116,16 @@ impl Interpreter {
                     *body.clone(),
                 ));
             }
+            ExprT::BooleanLiteral(b) => self.push_val(Value::Integer(*b as i64)),
+            ExprT::Conditional(cond, cons, alt) => {
+                self.eval_expr(cond);
+
+                if let Value::Integer(0) = self.pop_val().unwrap() {
+                    self.eval_expr(alt);
+                } else {
+                    self.eval_expr(cons);
+                }
+            }
             ExprT::Symbol(s) => {
                 if let Some(b) = self.program.bindings.get(s) {
                     if let (ExprT::Lambda(p, body), _) = b {
@@ -150,6 +160,8 @@ impl Interpreter {
                             Operator::BinOpSub => l - r,
                             Operator::BinOpMul => l * r,
                             Operator::BinOpDiv => l / r,
+                            Operator::BinOpLess => (l < r) as i64,
+                            Operator::BinOpGreater => (l > r) as i64,
                             _ => panic!(),
                         };
 
