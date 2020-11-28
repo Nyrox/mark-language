@@ -234,6 +234,25 @@ fn check_type(
 
 fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<TypedExpr> {
     match expr {
+        Expr::BinaryOp(op, lhs, rhs) => {
+            let lhs = infer_type(ctx, lhs)?;
+            let rhs = infer_type(ctx, rhs)?;
+
+            use untyped::Operator;
+
+            match (&lhs.1, &rhs.1) {
+                (ResolvedType::Int, ResolvedType::Int) => match op {
+                    Operator::BinOpMul
+                    | Operator::BinOpAdd
+                    | Operator::BinOpSub
+                    | Operator::BinOpDiv => {
+                        Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Int))
+                    }
+                    _ => None,
+                },
+                _ => None,
+            }
+        }
         Expr::LetBinding(binding, rhs, body) => {
             let (rhs, rhs_t) = infer_type(ctx, rhs).or_else(|| {
                 ctx.errors
@@ -406,6 +425,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
         }
         Expr::Unit(_) => Some((ExprT::Unit, ResolvedType::Unit)),
         Expr::StringLiteral(s) => Some((ExprT::StringLiteral(s.0.clone()), ResolvedType::String)),
+        Expr::IntegerLiteral(i) => Some((ExprT::IntegerLiteral(i.0), ResolvedType::Int)),
         _ => {
             dbg!("Excuse me?", expr);
             None

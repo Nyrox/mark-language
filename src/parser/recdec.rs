@@ -398,6 +398,9 @@ impl Parser<'_> {
             Spanned(Token::StringLiteral(i), span) => {
                 Expr::StringLiteral(Spanned(i.clone(), *span))
             }
+            Spanned(Token::IntegerLiteral(i), span) => {
+                Expr::IntegerLiteral(Spanned(i.clone(), *span))
+            }
             Spanned(Token::LeftBracket, _) => {
                 self.expect_token(Token::RightBracket)?;
                 Expr::ListConstructor()
@@ -426,7 +429,8 @@ impl Parser<'_> {
                 }
                 Some(Spanned(Token::LeftParen, span))
                 | Some(Spanned(Token::Identifier(_), span))
-                | Some(Spanned(Token::StringLiteral(_), span)) => {
+                | Some(Spanned(Token::StringLiteral(_), span))
+                | Some(Spanned(Token::IntegerLiteral(_), span)) => {
                     if min_bp > 10 || self.last_consumed.unwrap().1 .0 .0 != span.0 .0 {
                         break;
                     }
@@ -455,12 +459,17 @@ impl Parser<'_> {
             } else {
                 let rhs = self.parse_expr_bp(r_bp)?;
 
-                match t {
-                    Spanned(Token::Star, _) => {
-                        lhs = Expr::BinaryOp(Operator::BinOpMul, box lhs, box rhs)
-                    }
-                    _ => return Err(ParsingError::UnexpectedToken(t, None)),
-                }
+                lhs = Expr::BinaryOp(
+                    match t.0 {
+                        Token::Star => Operator::BinOpMul,
+                        Token::Slash => Operator::BinOpDiv,
+                        Token::Plus => Operator::BinOpAdd,
+                        Token::Minus => Operator::BinOpSub,
+                        _ => Err(ParsingError::UnexpectedToken(t, None))?,
+                    },
+                    box lhs,
+                    box rhs,
+                );
             }
         }
 
@@ -548,6 +557,9 @@ impl Parser<'_> {
         match t {
             &Token::Dot => Some((5, 6)),
             &Token::Star => Some((3, 4)),
+            &Token::Slash => Some((3, 4)),
+            &Token::Plus => Some((2, 3)),
+            &Token::Minus => Some((2, 3)),
             _ => None,
         }
     }

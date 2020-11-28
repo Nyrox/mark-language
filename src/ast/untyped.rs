@@ -72,9 +72,12 @@ pub struct ClosedTypeClass {
     pub typeclass_member_impls: Vec<TypeClassImplItem>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Operator {
     BinOpMul,
+    BinOpDiv,
+    BinOpAdd,
+    BinOpSub,
 }
 
 #[derive(Debug, Clone)]
@@ -85,6 +88,7 @@ pub enum Expr {
     Record(Vec<(Spanned<String>, Expr)>),
     Tuple(Vec<Expr>),
     StringLiteral(Spanned<String>),
+    IntegerLiteral(Spanned<i64>),
     Application(Box<Expr>, Box<Expr>),
     // TODO
     ListConstructor(),
@@ -104,6 +108,7 @@ impl Expr {
 
         match self {
             FieldAccess(e, s) => e.span().encompass(s.1),
+            IntegerLiteral(i) => i.1,
             Symbol(s) => s.1,
             Lambda(p, e) => p.1.encompass(e.span()),
             Record(_fields) => Span(Position(0, 0), Position(0, 0)),

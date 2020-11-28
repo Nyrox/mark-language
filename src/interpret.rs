@@ -8,6 +8,7 @@ pub enum Value {
     Tuple(Vec<Value>),
     Function(String, Vec<(String, Value)>, TypedExpr),
     String(String),
+    Integer(i64),
     Variant(TypeHandle, usize, Box<Value>),
     VariantConstructorFn(TypeHandle, usize),
 }
@@ -136,9 +137,31 @@ impl Interpreter {
                 }
                 self.push_val(Value::Tuple(r));
             }
+            ExprT::BinaryOp(op, lhs, rhs) => {
+                self.eval_expr(lhs);
+                self.eval_expr(rhs);
+
+                use crate::ast::untyped::Operator;
+
+                match (self.pop_val().unwrap(), self.pop_val().unwrap()) {
+                    (Value::Integer(r), Value::Integer(l)) => {
+                        let r = match op {
+                            Operator::BinOpAdd => l + r,
+                            Operator::BinOpSub => l - r,
+                            Operator::BinOpMul => l * r,
+                            Operator::BinOpDiv => l / r,
+                            _ => panic!(),
+                        };
+
+                        self.push_val(Value::Integer(r));
+                    }
+                    _ => panic!(),
+                }
+            }
             ExprT::StringLiteral(s) => {
                 self.push_val(Value::String(s.clone()));
             }
+            ExprT::IntegerLiteral(i) => self.push_val(Value::Integer(*i)),
             ExprT::ListConstructor() => {
                 self.push_val(Value::Tuple(vec![]));
             }

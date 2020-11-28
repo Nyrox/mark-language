@@ -44,21 +44,31 @@ type SOption =
 	| Some of String
 	| None
 
-
-
-//main :: () -> String
-//main () =
-//	// test (test_curry "din" "mor") "gey"
-//	let opt = SOption.Some "din mor"
-//	// let opt = SOption.None
-//	match opt with
-//	| Some s -> (test (test_curry "din" "mor") s).2
-//	| None -> "Wasn't"
+main_options :: () -> String
+main_options () =
+	// test (test_curry "din" "mor") "gey"
+	let opt = SOption.Some "din mor"
+	// let opt = SOption.None
+	match opt with
+	| Some s -> (test (test_curry "din" "mor") s).2
+	| None -> "Wasn't"
 
 type SList =
 	| Cons of (String, SList)
 	| End
 
-main () =
+main_lists () =
 	let list = SList.Cons ("mor", SList.Cons ("din", SList.End))
 	list
+
+
+double :: Int -> Int
+double x = x + x
+
+test_nums_ops :: () -> Int
+test_nums_ops () =
+	(5 - 2) * double 7 + 3 * 7 + 9 / 2
+
+
+main () =
+	test_nums_ops ()

@@ -109,6 +109,8 @@ pub enum ExprT {
     Tuple(Vec<TypedExpr>),
     Unit,
     MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
+    BinaryOp(untyped::Operator, Box<TypedExpr>, Box<TypedExpr>),
+    IntegerLiteral(i64),
 }
 
 pub type TypedExpr = (ExprT, ResolvedType);
