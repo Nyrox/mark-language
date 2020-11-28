@@ -453,16 +453,21 @@ fn typecheck_type_decl(ctx: &mut TypecheckingContext, ty: untyped::TypeDeclarati
         TypeDeclaration::Sum(st) => {
             let ident = Rc::new(st.ident.0.clone());
 
-            let td = TypeDefinition::Sum {
+            let th = ctx.insert_type_def(TypeDefinition::Sum {
                 qualified_name: ident.clone(),
-                variants: st
-                    .variants
-                    .iter()
-                    .map(|(v, t)| (v.0.clone(), resolve_type(ctx, t)))
-                    .collect(),
-            };
+                variants: Vec::new(),
+            });
 
-            ctx.insert_type_def(td);
+            let variants = st
+                .variants
+                .iter()
+                .map(|(v, t)| (v.0.clone(), resolve_type(ctx, t)))
+                .collect();
+
+            ctx.environment.borrow_mut().types[th.index] = TypeDefinition::Sum {
+                qualified_name: ident.clone(),
+                variants,
+            };
         }
         TypeDeclaration::Record(RecordDeclaration { ident, fields }) => {
             let qualified_name = Rc::new(ident.0.clone());

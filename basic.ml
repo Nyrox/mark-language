@@ -45,12 +45,20 @@ type SOption =
 	| None
 
 
-main :: () -> String
-main () =
-	// test (test_curry "din" "mor") "gey"
-	// let opt = SOption.Some "din mor"
-	let opt = SOption.None
-	match opt with
-	| Some s -> (test (test_curry "din" "mor") s).2
-	| None -> "Wasn't"
 
+//main :: () -> String
+//main () =
+//	// test (test_curry "din" "mor") "gey"
+//	let opt = SOption.Some "din mor"
+//	// let opt = SOption.None
+//	match opt with
+//	| Some s -> (test (test_curry "din" "mor") s).2
+//	| None -> "Wasn't"
+
+type SList =
+	| Cons of (String, SList)
+	| End
+
+main () =
+	let list = SList.Cons ("mor", SList.Cons ("din", SList.End))
+	list
