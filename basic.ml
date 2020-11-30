@@ -95,7 +95,7 @@ apply_op op a =
 apply :: OpList -> Int -> Int
 apply oplist init =
 	match oplist with
-	| Cons cons -> apply (cons.1) (apply_op (cons.0) init)
+	| Cons cons -> apply cons.1 (apply_op cons.0 init)
 	| Nil -> init
 
 main () =

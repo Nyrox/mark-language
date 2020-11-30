@@ -438,6 +438,16 @@ impl Parser<'_> {
                 Some(t) if Self::infix_binding_power(t).is_some() => {
                     (t.clone(), Self::infix_binding_power(t).unwrap())
                 }
+                Some(Spanned(Token::Dot, _)) => {
+                    self.expect_next()?;
+                    let field = match self.expect_next()? {
+                        Spanned(Token::Identifier(i), span) => Spanned(i.clone(), *span),
+                        Spanned(Token::IntegerLiteral(i), span) => Spanned(i.to_string(), *span),
+                        t => return Err(ParsingError::UnexpectedToken(t.clone(), None)),
+                    };
+                    lhs = Expr::FieldAccess(box lhs, field);
+                    continue;
+                }
                 Some(Spanned(Token::LeftParen, span))
                 | Some(Spanned(Token::Identifier(_), span))
                 | Some(Spanned(Token::StringLiteral(_), span))
@@ -459,31 +469,21 @@ impl Parser<'_> {
 
             self.expect_next()?;
 
-            // field access
-            if let Spanned(Token::Dot, _) = t {
-                let field = match self.expect_next()? {
-                    Spanned(Token::Identifier(i), span) => Spanned(i.clone(), *span),
-                    Spanned(Token::IntegerLiteral(i), span) => Spanned(i.to_string(), *span),
-                    t => return Err(ParsingError::UnexpectedToken(t.clone(), None)),
-                };
-                lhs = Expr::FieldAccess(box lhs, field);
-            } else {
-                let rhs = self.parse_expr_bp(r_bp)?;
+            let rhs = self.parse_expr_bp(r_bp)?;
 
-                lhs = Expr::BinaryOp(
-                    match t.0 {
-                        Token::Star => Operator::BinOpMul,
-                        Token::Slash => Operator::BinOpDiv,
-                        Token::Plus => Operator::BinOpAdd,
-                        Token::Minus => Operator::BinOpSub,
-                        Token::Greater => Operator::BinOpGreater,
-                        Token::Less => Operator::BinOpLess,
-                        _ => Err(ParsingError::UnexpectedToken(t, None))?,
-                    },
-                    box lhs,
-                    box rhs,
-                );
-            }
+            lhs = Expr::BinaryOp(
+                match t.0 {
+                    Token::Star => Operator::BinOpMul,
+                    Token::Slash => Operator::BinOpDiv,
+                    Token::Plus => Operator::BinOpAdd,
+                    Token::Minus => Operator::BinOpSub,
+                    Token::Greater => Operator::BinOpGreater,
+                    Token::Less => Operator::BinOpLess,
+                    _ => Err(ParsingError::UnexpectedToken(t, None))?,
+                },
+                box lhs,
+                box rhs,
+            );
         }
 
         Ok(lhs)
@@ -569,7 +569,6 @@ impl Parser<'_> {
 
     pub fn infix_binding_power(t: &Token) -> Option<(u8, u8)> {
         match t {
-            &Token::Dot => Some((10, 11)),
             &Token::Star => Some((6, 7)),
             &Token::Slash => Some((6, 7)),
             &Token::Plus => Some((4, 5)),
