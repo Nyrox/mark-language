@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::{ast::typed::TypedExpr, ast::typed::*, typecheck::TypeChecked};
 
@@ -9,7 +9,7 @@ pub enum Value {
     Function(String, Vec<(String, Value)>, *const TypedExpr),
     String(String),
     Integer(i64),
-    Variant(TypeHandle, usize, Box<Value>),
+    Variant(TypeHandle, usize, Rc<Value>),
     VariantConstructorFn(TypeHandle, usize),
     BuiltInFn(BuiltInFn),
 }
@@ -51,27 +51,27 @@ impl Interpreter {
             }
             BuiltInFn::Print => {
                 if let Value::String(s) = arg {
-					print!("{}", s);
+                    print!("{}", s);
                     self.push_val(Value::Unit);
                 } else {
                     panic!();
-				}
-			}
-			BuiltInFn::Printi => {
-				if let Value::Integer(i) = arg {
-					print!("{}", i);
-					self.push_val(Value::Unit);
-				} else {
-					panic!()
-				}
-			}
-			BuiltInFn::StringParseInt => {
-				if let Value::String(s) = arg {
-					self.push_val(Value::Integer(s.parse::<i64>().unwrap()));
-				} else {
-					panic!()
-				}
-			}
+                }
+            }
+            BuiltInFn::Printi => {
+                if let Value::Integer(i) = arg {
+                    print!("{}", i);
+                    self.push_val(Value::Unit);
+                } else {
+                    panic!()
+                }
+            }
+            BuiltInFn::StringParseInt => {
+                if let Value::String(s) = arg {
+                    self.push_val(Value::Integer(s.parse::<i64>().unwrap()));
+                } else {
+                    panic!()
+                }
+            }
             BuiltInFn::StringSplit => {
                 if let Value::Tuple(args) = arg {
                     assert!(args.len() == 2);
@@ -129,7 +129,7 @@ impl Interpreter {
                     for (arm_i, binding, body) in arms {
                         if *arm_i == vi {
                             binding.iter().for_each(|binding| {
-                                self.bindings.insert(binding.clone(), *val.clone());
+                                self.bindings.insert(binding.clone(), (*val).clone());
                             });
 
                             self.eval_expr(body);
@@ -163,15 +163,13 @@ impl Interpreter {
                     }
                     self.bindings.insert(p.clone(), rv);
 
-                    self.eval_expr(unsafe {
-						&*body
-					});
+                    self.eval_expr(unsafe { &*body });
 
                     self.bindings = bindings_tmp;
                 } else if let Some(Value::VariantConstructorFn(th, vi)) = top {
                     self.eval_expr(rhs);
                     let rv = self.pop_val().unwrap();
-                    self.push_val(Value::Variant(th.clone(), vi, box rv));
+                    self.push_val(Value::Variant(th.clone(), vi, Rc::new(rv)));
                 } else if let Some(Value::BuiltInFn(f)) = top {
                     self.eval_expr(rhs);
                     let argv = self.pop_val().unwrap();
@@ -185,7 +183,7 @@ impl Interpreter {
                 self.push_val(Value::Function(
                     p.clone(),
                     self.bindings.clone().into_iter().collect(),
-                    body.as_ref() as *const TypedExpr
+                    body.as_ref() as *const TypedExpr,
                 ));
             }
             ExprT::BooleanLiteral(b) => self.push_val(Value::Integer(*b as i64)),
@@ -201,7 +199,11 @@ impl Interpreter {
             ExprT::Symbol(s) => {
                 if let Some(b) = self.program.bindings.get(s) {
                     if let (ExprT::Lambda(p, body), _) = b {
-                        self.push_val(Value::Function(p.clone(), vec![], body.as_ref() as *const TypedExpr));
+                        self.push_val(Value::Function(
+                            p.clone(),
+                            vec![],
+                            body.as_ref() as *const TypedExpr,
+                        ));
                     } else if let (ExprT::BuiltInFn(f), _) = b {
                         self.push_val(Value::BuiltInFn(*f));
                     } else {
@@ -264,7 +266,7 @@ impl Interpreter {
                 if let TypeDefinition::Sum { variants, .. } = t {
                     let (_n, vt) = &variants[*vi];
                     if let ResolvedType::Unit = vt {
-                        self.push_val(Value::Variant(th.clone(), *vi, box Value::Unit));
+                        self.push_val(Value::Variant(th.clone(), *vi, Rc::new(Value::Unit)));
                     } else {
                         self.push_val(Value::VariantConstructorFn(th.clone(), *vi));
                     }

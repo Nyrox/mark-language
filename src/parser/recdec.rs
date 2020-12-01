@@ -378,8 +378,8 @@ impl Parser<'_> {
 
                     let body = self.parse_expr()?;
                     arms.push((variant, binding, body));
-				}
-				self.maybe_expect(&Token::End);
+                }
+                self.maybe_expect(&Token::End);
 
                 return Ok(Expr::Match(box expr, arms));
             }
