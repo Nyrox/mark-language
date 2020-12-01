@@ -1,28 +1,54 @@
 
 
 
-type SList =
-	| Cons of (String, SList)
+type IList =
+	| Cons of (Int, IList)
 	| Nil
 
 
-collect :: String -> String -> SList
+collect :: String -> String -> IList
 collect sep input =
 	if input == "" then
-		SList.Nil
+		IList.Nil
 	else
 		let split = String_split (input, sep)
-		SList.Cons (split.0, collect sep split.1)
+		IList.Cons (String_parse_int split.0, collect sep split.1)
 
-map :: (String -> ()) -> SList -> ()
-map f list =
+type IOption =
+	| Some of Int
+	| None
+
+
+iter_while :: (Int -> IOption) -> IList -> IOption
+iter_while f list =
 	match list with
-	| Cons sl ->
-		let _ =  f sl.0
-		map f sl.1
-	| Nil -> ()
+	| Cons cons ->
+		match f cons.0 with
+		| Some s -> IOption.Some s
+		| None -> iter_while f cons.1
+		end
+	| Nil -> IOption.None
+
+
+zip :: ((Int, Int, Int) -> IOption) -> IList -> IList -> IList -> IOption
+zip f a b c =
+	iter_while (\ia ->
+		let _ = printi ia
+		let _ = print "\n"
+		iter_while (\ib ->
+			iter_while (\ic ->
+				f (ia, ib, ic)
+			) c
+		) b
+	) a
+
 
 main () =
 	let input = File_read "./input"
-	let list = collect "\r\n" input
-	map (\s -> println s) list
+	let ilist = collect "\r\n" input
+	zip (\ip ->
+		if ip.0 + ip.1 + ip.2 == 2020 then
+			IOption.Some (ip.0 * ip.1 * ip.2)
+		else
+			IOption.None
+		) ilist ilist ilist

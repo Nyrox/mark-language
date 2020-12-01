@@ -614,7 +614,8 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
         ("File_read", BuiltInFn::FileRead),
         ("String_split", BuiltInFn::StringSplit),
         ("String_parse_int", BuiltInFn::StringParseInt),
-        ("println", BuiltInFn::Println),
+		("print", BuiltInFn::Print),
+		("printi", BuiltInFn::Printi),
     ];
 
     let mut bindings = HashMap::new();
