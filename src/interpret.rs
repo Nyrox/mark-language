@@ -11,6 +11,7 @@ pub enum Value {
     Integer(i64),
     Variant(TypeHandle, usize, Box<Value>),
     VariantConstructorFn(TypeHandle, usize),
+    BuiltInFn(BuiltInFn),
 }
 
 #[derive(Debug)]
@@ -35,6 +36,56 @@ impl Interpreter {
             self.eval_expr(&body)
         } else {
             panic!("Tried to call non function value {:?}", e);
+        }
+    }
+
+    pub fn call_builtin(&mut self, builtin: BuiltInFn, arg: Value) {
+        match builtin {
+            BuiltInFn::FileRead => {
+                if let Value::String(s) = arg {
+                    let buf = std::fs::read_to_string(s).unwrap();
+                    self.push_val(Value::String(buf));
+                } else {
+                    panic!()
+                }
+            }
+            BuiltInFn::Println => {
+                if let Value::String(s) = arg {
+                    println!("{}", s);
+                    self.push_val(Value::Unit);
+                } else {
+                    panic!();
+                }
+            }
+            BuiltInFn::StringSplit => {
+                if let Value::Tuple(args) = arg {
+                    assert!(args.len() == 2);
+                    match (&args[0], &args[1]) {
+                        (Value::String(input), Value::String(seperator)) => {
+                            if let Some(sep_i) = input.find(seperator) {
+                                let (up, to) = input.split_at(sep_i);
+                                self.push_val(Value::Tuple(vec![
+                                    Value::String(up.to_string()),
+                                    Value::String(to[seperator.len()..].to_owned()),
+                                ]));
+                            } else {
+                                self.push_val(Value::Tuple(vec![
+                                    Value::String(input.clone()),
+                                    Value::String(String::new()),
+                                ]));
+                            }
+                        }
+                        _ => panic!(),
+                    }
+                } else {
+                    panic!()
+                }
+            }
+            _ => {
+                dbg!(builtin);
+
+                unimplemented!()
+            }
         }
     }
 
@@ -104,6 +155,10 @@ impl Interpreter {
                     self.eval_expr(rhs);
                     let rv = self.pop_val().unwrap();
                     self.push_val(Value::Variant(th.clone(), vi, box rv));
+                } else if let Some(Value::BuiltInFn(f)) = top {
+                    self.eval_expr(rhs);
+                    let argv = self.pop_val().unwrap();
+                    self.call_builtin(f, argv);
                 } else {
                     dbg!(lhs, &self.stack, &self.bindings);
                     panic!("Not good")
@@ -130,6 +185,8 @@ impl Interpreter {
                 if let Some(b) = self.program.bindings.get(s) {
                     if let (ExprT::Lambda(p, body), _) = b {
                         self.push_val(Value::Function(p.clone(), vec![], *body.clone()));
+                    } else if let (ExprT::BuiltInFn(f), _) = b {
+                        self.push_val(Value::BuiltInFn(*f));
                     } else {
                         panic!()
                     }
@@ -162,11 +219,19 @@ impl Interpreter {
                             Operator::BinOpDiv => l / r,
                             Operator::BinOpLess => (l < r) as i64,
                             Operator::BinOpGreater => (l > r) as i64,
+                            Operator::BinOpEquals => (l == r) as i64,
                             _ => panic!(),
                         };
 
                         self.push_val(Value::Integer(r));
                     }
+                    (Value::String(r), Value::String(l)) => match op {
+                        Operator::BinOpEquals => {
+                            self.push_val(Value::Integer((l == r) as i64));
+                        }
+                        _ => panic!(),
+                    },
+
                     _ => panic!(),
                 }
             }

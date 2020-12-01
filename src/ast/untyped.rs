@@ -81,6 +81,7 @@ pub enum Operator {
     BinOpSub,
     BinOpGreater,
     BinOpLess,
+    BinOpEquals,
 }
 
 #[derive(Debug, Clone)]

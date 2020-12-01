@@ -264,7 +264,13 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                     | Operator::BinOpDiv => {
                         Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Int))
                     }
-                    Operator::BinOpLess | Operator::BinOpGreater => {
+                    Operator::BinOpLess | Operator::BinOpGreater | Operator::BinOpEquals => {
+                        Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Bool))
+                    }
+                    _ => None,
+                },
+                (ResolvedType::String, ResolvedType::String) => match op {
+                    Operator::BinOpEquals => {
                         Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Bool))
                     }
                     _ => None,
@@ -604,7 +610,20 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
         variant: None,
     };
 
+    let builtins = &[
+        ("File_read", BuiltInFn::FileRead),
+        ("String_split", BuiltInFn::StringSplit),
+        ("String_parse_int", BuiltInFn::StringParseInt),
+        ("println", BuiltInFn::Println),
+    ];
+
     let mut bindings = HashMap::new();
+    for (name, f) in builtins {
+        bindings.insert(name.to_string(), (ExprT::BuiltInFn(*f), f.resolved_type()));
+        checking_context
+            .symbols
+            .insert(name.to_string(), f.resolved_type());
+    }
 
     for d in ast.declarations {
         match d {

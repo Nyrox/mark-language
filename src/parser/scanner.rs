@@ -142,6 +142,16 @@ impl<I: Iterator<Item = char>> Scanner<I> {
                 loop {
                     match self.advance() {
                         Some('"') => break,
+                        Some('\\') => match self.advance() {
+                            Some('\\') => string.push('\\'),
+                            Some('r') => string.push('\r'),
+                            Some('n') => string.push('\n'),
+                            Some(c) => Err(ScanningError::UnexpectedCharacter(Spanned(
+                                c,
+                                Span(from, to),
+                            )))?,
+                            None => Err(ScanningError::UnexpectedEndOfFile)?,
+                        },
                         Some(c) => string.push(c),
                         None => Err(ScanningError::UnexpectedEndOfFile)?,
                     }

@@ -12,21 +12,31 @@ pub mod interpret;
 pub mod typecheck;
 
 fn main() {
-    let file = std::fs::read_to_string("basic.ml").unwrap();
+    let file = std::fs::read_to_string("examples/aoc2020/day1/main.ml").unwrap();
 
-    let tokens = Scanner::new(file.chars()).scan_all().unwrap();
+    std::env::set_current_dir("examples/aoc2020/day1").unwrap();
 
-    let ast = parser::Parser::new(&tokens).parse().unwrap();
+    let thread = std::thread::Builder::new().stack_size(32 * 1024 * 1024);
 
-    // dbg!(&ast);
+    let runner = thread
+        .spawn(move || {
+            let tokens = Scanner::new(file.chars()).scan_all().unwrap();
 
-    let typechecked = match typecheck::typecheck(ast) {
-        Ok(t) => t,
-        Err(errs) => {
-            dbg!(errs);
-            return;
-        }
-    };
+            let ast = parser::Parser::new(&tokens).parse().unwrap();
 
-    interpret::interpret(typechecked);
+            // dbg!(&ast);
+
+            let typechecked = match typecheck::typecheck(ast) {
+                Ok(t) => t,
+                Err(errs) => {
+                    dbg!(errs);
+                    return;
+                }
+            };
+
+            interpret::interpret(typechecked);
+        })
+        .unwrap();
+
+    runner.join().unwrap()
 }

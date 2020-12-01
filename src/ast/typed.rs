@@ -96,6 +96,31 @@ pub enum ResolvedType {
     ErrType, // indicates that type checking previously failed
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum BuiltInFn {
+    FileRead,
+    StringSplit,
+    StringParseInt,
+    Println,
+}
+
+impl BuiltInFn {
+    pub fn resolved_type(&self) -> ResolvedType {
+        use BuiltInFn::*;
+        use ResolvedType::*;
+
+        match self {
+            FileRead => Function(box ResolvedType::String, box ResolvedType::String),
+            StringSplit => Function(
+                box Tuple(vec![ResolvedType::String, ResolvedType::String]),
+                box ResolvedType::Tuple(vec![ResolvedType::String, ResolvedType::String]),
+            ),
+            StringParseInt => Function(box ResolvedType::String, box ResolvedType::Int),
+            Println => Function(box ResolvedType::String, box ResolvedType::Unit),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ExprT {
     Lambda(String, Box<TypedExpr>),
@@ -114,6 +139,7 @@ pub enum ExprT {
     IntegerLiteral(i64),
     BooleanLiteral(bool),
     Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
+    BuiltInFn(BuiltInFn),
 }
 
 pub type TypedExpr = (ExprT, ResolvedType);

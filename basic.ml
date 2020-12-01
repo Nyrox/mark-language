@@ -98,6 +98,10 @@ apply oplist init =
 	| Cons cons -> apply cons.1 (apply_op cons.0 init)
 	| Nil -> init
 
-main () =
-	let ops = OpList.Cons (Op.Add 5, OpList.Cons (Op.Sub 3, OpList.Cons (Op.Add 7, OpList.Nil)))
-	apply ops 10
+// main () =
+// 	let ops = OpList.Cons (Op.Add 5, OpList.Cons (Op.Sub 3, OpList.Cons (Op.Add 7, OpList.Nil)))
+// 	apply ops 10
+
+
+
+

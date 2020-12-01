@@ -7,3 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[build]
+rustflags = ["-C", "link-args=-Wl,-stack_size,0x100000000"]

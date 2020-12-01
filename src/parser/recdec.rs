@@ -479,6 +479,7 @@ impl Parser<'_> {
                     Token::Minus => Operator::BinOpSub,
                     Token::Greater => Operator::BinOpGreater,
                     Token::Less => Operator::BinOpLess,
+                    Token::EqualsEquals => Operator::BinOpEquals,
                     _ => Err(ParsingError::UnexpectedToken(t, None))?,
                 },
                 box lhs,
@@ -574,6 +575,7 @@ impl Parser<'_> {
             &Token::Plus => Some((4, 5)),
             &Token::Minus => Some((4, 5)),
 
+            &Token::EqualsEquals => Some((1, 2)),
             &Token::Less => Some((1, 2)),
             &Token::Greater => Some((1, 2)),
             _ => None,
