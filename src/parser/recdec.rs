@@ -452,7 +452,9 @@ impl Parser<'_> {
                 Some(Spanned(Token::LeftParen, span))
                 | Some(Spanned(Token::Identifier(_), span))
                 | Some(Spanned(Token::StringLiteral(_), span))
-                | Some(Spanned(Token::IntegerLiteral(_), span)) => {
+                | Some(Spanned(Token::IntegerLiteral(_), span))
+                | Some(Spanned(Token::True, span))
+                | Some(Spanned(Token::False, span)) => {
                     if min_bp > 10 || self.last_consumed.unwrap().1 .0 .0 != span.0 .0 {
                         break;
                     }
@@ -585,7 +587,7 @@ impl Parser<'_> {
             &Token::Greater => Some((2, 3)),
             &Token::GreaterEq => Some((2, 3)),
 
-            &Token::EqualsEquals => Some((1, 2)),
+            &Token::EqualsEquals => Some((2, 3)),
             &Token::And => Some((1, 2)),
             &Token::Or => Some((1, 2)),
             _ => None,

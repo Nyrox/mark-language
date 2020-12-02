@@ -74,7 +74,6 @@ impl Interpreter {
             }
             BuiltInFn::StringGetFirst => {
                 if let Value::String(s) = arg {
-
                     self.push_val(Value::Tuple(vec![
                         Value::String(Rc::new(s[0..1].to_string())),
                         Value::String(Rc::new(s[1..].to_string())),
@@ -247,13 +246,13 @@ impl Interpreter {
                             Operator::BinOpSub => l - r,
                             Operator::BinOpMul => l * r,
                             Operator::BinOpDiv => l / r,
-							Operator::BinOpLess => (l < r) as i64,
-							Operator::BinOpLessEq => (l <= r) as i64,
-							Operator::BinOpGreater => (l > r) as i64,
-							Operator::BinOpGreaterEq => (l >= r) as i64,
-							Operator::BinOpEquals => (l == r) as i64,
-							Operator::BinOpAnd => (l & r) as i64,
-							Operator::BinOpOr => (l | r) as i64,
+                            Operator::BinOpLess => (l < r) as i64,
+                            Operator::BinOpLessEq => (l <= r) as i64,
+                            Operator::BinOpGreater => (l > r) as i64,
+                            Operator::BinOpGreaterEq => (l >= r) as i64,
+                            Operator::BinOpEquals => (l == r) as i64,
+                            Operator::BinOpAnd => (l & r) as i64,
+                            Operator::BinOpOr => (l | r) as i64,
                             _ => panic!(),
                         };
 

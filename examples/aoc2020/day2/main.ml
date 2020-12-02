@@ -57,7 +57,7 @@ count_substr sub haystack =
 			count_substr sub split.1
 
 
-main () =
+part1 () =
 	let input = File_read "./input"
 	let input_parsed = parse input
 
@@ -65,3 +65,46 @@ main () =
 		let count = count_substr elem.pred elem.input
 		count >= elem.min and count <= elem.max
 		) input_parsed
+
+
+fold_chars_impl :: ((Bool, Int, String) -> Bool) -> Bool -> String -> Int -> Bool
+fold_chars_impl f init str i =
+	if str == "" then
+		init
+	else
+		let split = String_get_first str
+		f (
+			fold_chars_impl f init split.1 (i + 1),
+			i,
+			split.0)
+
+fold_chars :: ((Bool, Int, String) -> Bool) -> Bool -> String -> Bool
+fold_chars f init str =
+	fold_chars_impl f init str 1
+
+
+not :: Bool -> Bool
+not b =
+	if b then
+		false
+	else
+		true
+
+
+fold_fn :: Input -> (Bool, Int, String) -> Bool
+fold_fn elem folder =
+	if (folder.1 == elem.min or folder.1 == elem.max)
+		and folder.2 == elem.pred then
+		not folder.0
+	else
+		folder.0
+
+main () =
+	let input = File_read "./input"
+	let input_parsed = parse input
+
+	count_bools (\elem ->
+		fold_chars (fold_fn elem) false elem.input
+	) input_parsed
+
+
