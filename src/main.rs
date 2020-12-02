@@ -35,7 +35,10 @@ fn main() {
                 }
             };
 
-            interpret::interpret(typechecked);
+			let program = codegen::codegen(typechecked);
+			dbg!(program);
+
+            // interpret::interpret(typechecked);
         })
         .unwrap();
 
