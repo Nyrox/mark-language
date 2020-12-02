@@ -43,6 +43,8 @@ pub enum Token {
     Greater,
     GreaterEq,
     Dot,
+    And,
+    Or,
 
     Void,
     Return,

@@ -33,8 +33,6 @@ iter_while f list =
 zip :: ((Int, Int, Int) -> IOption) -> IList -> IList -> IList -> IOption
 zip f a b c =
 	iter_while (\ia ->
-		let _ = printi ia
-		let _ = print "\n"
 		iter_while (\ib ->
 			iter_while (\ic ->
 				f (ia, ib, ic)

@@ -80,8 +80,12 @@ pub enum Operator {
     BinOpAdd,
     BinOpSub,
     BinOpGreater,
+    BinOpGreaterEq,
     BinOpLess,
+    BinOpLessEq,
     BinOpEquals,
+    BinOpAnd,
+    BinOpOr,
 }
 
 #[derive(Debug, Clone)]

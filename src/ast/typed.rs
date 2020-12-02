@@ -101,6 +101,7 @@ pub enum BuiltInFn {
     FileRead,
     StringSplit,
     StringParseInt,
+    StringGetFirst,
     Printi,
     Print,
 }
@@ -117,6 +118,10 @@ impl BuiltInFn {
                 box ResolvedType::Tuple(vec![ResolvedType::String, ResolvedType::String]),
             ),
             StringParseInt => Function(box ResolvedType::String, box ResolvedType::Int),
+            StringGetFirst => Function(
+                box ResolvedType::String,
+                box ResolvedType::Tuple(vec![ResolvedType::String, ResolvedType::String]),
+            ),
             Print => Function(box ResolvedType::String, box ResolvedType::Unit),
             Printi => Function(box ResolvedType::Int, box ResolvedType::Unit),
         }

@@ -6,8 +6,8 @@ use crate::{ast::typed::TypedExpr, ast::typed::*, typecheck::TypeChecked};
 pub enum Value {
     Unit,
     Tuple(Vec<Value>),
-    Function(String, Vec<(String, Value)>, *const TypedExpr),
-    String(String),
+    Function(Rc<String>, Vec<(String, Value)>, *const TypedExpr),
+    String(Rc<String>),
     Integer(i64),
     Variant(TypeHandle, usize, Rc<Value>),
     VariantConstructorFn(TypeHandle, usize),
@@ -43,8 +43,8 @@ impl Interpreter {
         match builtin {
             BuiltInFn::FileRead => {
                 if let Value::String(s) = arg {
-                    let buf = std::fs::read_to_string(s).unwrap();
-                    self.push_val(Value::String(buf));
+                    let buf = std::fs::read_to_string(s.as_str()).unwrap();
+                    self.push_val(Value::String(Rc::new(buf)));
                 } else {
                     panic!()
                 }
@@ -72,21 +72,32 @@ impl Interpreter {
                     panic!()
                 }
             }
+            BuiltInFn::StringGetFirst => {
+                if let Value::String(s) = arg {
+                    let r = s.split_at(s.char_indices().next().unwrap().0);
+                    self.push_val(Value::Tuple(vec![
+                        Value::String(Rc::new(r.0.to_string())),
+                        Value::String(Rc::new(r.1.to_string())),
+                    ]));
+                } else {
+                    panic!();
+                }
+            }
             BuiltInFn::StringSplit => {
                 if let Value::Tuple(args) = arg {
                     assert!(args.len() == 2);
                     match (&args[0], &args[1]) {
                         (Value::String(input), Value::String(seperator)) => {
-                            if let Some(sep_i) = input.find(seperator) {
+                            if let Some(sep_i) = input.find(seperator.as_str()) {
                                 let (up, to) = input.split_at(sep_i);
                                 self.push_val(Value::Tuple(vec![
-                                    Value::String(up.to_string()),
-                                    Value::String(to[seperator.len()..].to_owned()),
+                                    Value::String(Rc::new(up.to_string())),
+                                    Value::String(Rc::new(to[seperator.len()..].to_owned())),
                                 ]));
                             } else {
                                 self.push_val(Value::Tuple(vec![
                                     Value::String(input.clone()),
-                                    Value::String(String::new()),
+                                    Value::String(Rc::new(String::new())),
                                 ]));
                             }
                         }
@@ -161,7 +172,7 @@ impl Interpreter {
                     for (i, e) in curried.clone() {
                         self.bindings.insert(i, e);
                     }
-                    self.bindings.insert(p.clone(), rv);
+                    self.bindings.insert((*p).clone(), rv);
 
                     self.eval_expr(unsafe { &*body });
 
@@ -181,7 +192,7 @@ impl Interpreter {
             }
             ExprT::Lambda(p, body) => {
                 self.push_val(Value::Function(
-                    p.clone(),
+                    Rc::new(p.clone()),
                     self.bindings.clone().into_iter().collect(),
                     body.as_ref() as *const TypedExpr,
                 ));
@@ -200,7 +211,7 @@ impl Interpreter {
                 if let Some(b) = self.program.bindings.get(s) {
                     if let (ExprT::Lambda(p, body), _) = b {
                         self.push_val(Value::Function(
-                            p.clone(),
+                            Rc::new(p.clone()),
                             vec![],
                             body.as_ref() as *const TypedExpr,
                         ));
@@ -255,7 +266,7 @@ impl Interpreter {
                 }
             }
             ExprT::StringLiteral(s) => {
-                self.push_val(Value::String(s.clone()));
+                self.push_val(Value::String(Rc::new(s.clone())));
             }
             ExprT::IntegerLiteral(i) => self.push_val(Value::Integer(*i)),
             ExprT::ListConstructor() => {

@@ -93,6 +93,8 @@ impl<I: Iterator<Item = char>> Scanner<I> {
             "false" => Some(Token::False),
             "String" => Some(Token::String),
             "for" => Some(Token::For),
+            "and" => Some(Token::And),
+            "or" => Some(Token::Or),
             _ => None,
         }
     }
@@ -146,6 +148,7 @@ impl<I: Iterator<Item = char>> Scanner<I> {
                             Some('\\') => string.push('\\'),
                             Some('r') => string.push('\r'),
                             Some('n') => string.push('\n'),
+                            Some('t') => string.push('\t'),
                             Some(c) => Err(ScanningError::UnexpectedCharacter(Spanned(
                                 c,
                                 Span(from, to),

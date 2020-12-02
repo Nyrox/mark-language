@@ -264,13 +264,23 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                     | Operator::BinOpDiv => {
                         Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Int))
                     }
-                    Operator::BinOpLess | Operator::BinOpGreater | Operator::BinOpEquals => {
+                    Operator::BinOpLess
+                    | Operator::BinOpLessEq
+                    | Operator::BinOpGreater
+                    | Operator::BinOpGreaterEq
+                    | Operator::BinOpEquals => {
                         Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Bool))
                     }
                     _ => None,
                 },
                 (ResolvedType::String, ResolvedType::String) => match op {
                     Operator::BinOpEquals => {
+                        Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Bool))
+                    }
+                    _ => None,
+                },
+                (ResolvedType::Bool, ResolvedType::Bool) => match op {
+                    Operator::BinOpAnd | Operator::BinOpOr => {
                         Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Bool))
                     }
                     _ => None,
@@ -614,6 +624,7 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
         ("File_read", BuiltInFn::FileRead),
         ("String_split", BuiltInFn::StringSplit),
         ("String_parse_int", BuiltInFn::StringParseInt),
+        ("String_get_first", BuiltInFn::StringGetFirst),
         ("print", BuiltInFn::Print),
         ("printi", BuiltInFn::Printi),
     ];
