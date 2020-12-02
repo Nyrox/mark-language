@@ -131,22 +131,22 @@ impl BuiltInFn {
 #[derive(Debug, Clone)]
 pub enum ExprT {
     Lambda(String, Box<TypedExpr>),
-    StringLiteral(String),
     Record(Vec<TypedExpr>),
     ListConstructor(),
     VariantConstructor(TypeHandle, usize),
     Application(Box<TypedExpr>, Box<TypedExpr>),
-    Symbol(String),
     FieldAccess(Box<TypedExpr>, usize),
     LetBinding(String, Box<TypedExpr>, Box<TypedExpr>),
-    Tuple(Vec<TypedExpr>),
-    Unit,
     MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
+    Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
+    Tuple(Vec<TypedExpr>),
     BinaryOp(untyped::Operator, Box<TypedExpr>, Box<TypedExpr>),
+    BuiltInFn(BuiltInFn),
+    Symbol(String),
+    StringLiteral(String),
     IntegerLiteral(i64),
     BooleanLiteral(bool),
-    Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
-    BuiltInFn(BuiltInFn),
+    Unit,
 }
 
 pub type TypedExpr = (ExprT, ResolvedType);

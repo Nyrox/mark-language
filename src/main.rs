@@ -10,6 +10,7 @@ pub mod ast;
 
 pub mod interpret;
 pub mod typecheck;
+pub mod codegen;
 
 fn main() {
     let file = std::fs::read_to_string("examples/aoc2020/day2/main.ml").unwrap();
@@ -40,3 +41,4 @@ fn main() {
 
     runner.join().unwrap()
 }
+
