@@ -183,6 +183,7 @@ impl<I: Iterator<Item = char>> Scanner<I> {
             '<' => tok(Token::Less),
             '>' => tok(Token::Greater),
             '=' => tok(Token::Equals),
+            '%' => tok(Token::Percent),
 
             '\n' => {
                 self.line += 1;

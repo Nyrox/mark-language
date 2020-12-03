@@ -253,6 +253,7 @@ impl Interpreter {
                             Operator::BinOpEquals => (l == r) as i64,
                             Operator::BinOpAnd => (l & r) as i64,
                             Operator::BinOpOr => (l | r) as i64,
+                            Operator::BinOpMod => (l % r),
                             _ => panic!(),
                         };
 

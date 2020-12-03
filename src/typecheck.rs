@@ -250,6 +250,16 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
 
             Some((ExprT::Conditional(box cond, box cons, box alt), ct))
         }
+        Expr::Tuple(exprs) => {
+            let typed_exprs = exprs
+                .iter()
+                .map(|e| infer_type(ctx, e))
+                .collect::<Option<Vec<_>>>()?;
+            let tuple_type =
+                ResolvedType::Tuple(typed_exprs.iter().map(|(_, t)| t.clone()).collect());
+
+            Some((ExprT::Tuple(typed_exprs), tuple_type))
+        }
         Expr::BinaryOp(op, lhs, rhs) => {
             let lhs = infer_type(ctx, lhs)?;
             let rhs = infer_type(ctx, rhs)?;
@@ -261,7 +271,8 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> Option<Typ
                     Operator::BinOpMul
                     | Operator::BinOpAdd
                     | Operator::BinOpSub
-                    | Operator::BinOpDiv => {
+                    | Operator::BinOpDiv
+                    | Operator::BinOpMod => {
                         Some((ExprT::BinaryOp(*op, box lhs, box rhs), ResolvedType::Int))
                     }
                     Operator::BinOpLess

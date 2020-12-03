@@ -12,9 +12,9 @@ pub mod interpret;
 pub mod typecheck;
 
 fn main() {
-    let file = std::fs::read_to_string("examples/aoc2020/day2/main.ml").unwrap();
+    let file = std::fs::read_to_string("examples/aoc2020/day3/main.ml").unwrap();
 
-    std::env::set_current_dir("examples/aoc2020/day2").unwrap();
+    std::env::set_current_dir("examples/aoc2020/day3").unwrap();
 
     let thread = std::thread::Builder::new().stack_size(32 * 1024 * 1024);
 

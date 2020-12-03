@@ -45,6 +45,7 @@ pub enum Token {
     Dot,
     And,
     Or,
+    Percent,
 
     Void,
     Return,
