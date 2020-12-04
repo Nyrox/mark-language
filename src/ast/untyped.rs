@@ -17,31 +17,26 @@ pub enum Ty {
 }
 
 #[derive(Debug, Clone)]
-pub struct RecordDeclaration {
-    pub ident: Spanned<String>,
-    pub fields: Vec<(Spanned<String>, Ty, Option<Attribute>)>,
+pub enum TypeDefinition {
+    TypeAlias(Ty),
+    Record {
+        fields: Vec<(Spanned<String>, Ty, Option<Attribute>)>,
+    },
+    Sum {
+        variants: Vec<(Spanned<String>, Ty)>,
+    },
 }
 
 #[derive(Debug, Clone)]
-pub struct SumTypeDeclaration {
+pub struct TypeDeclaration {
+    pub type_parameters: Vec<Spanned<String>>,
     pub ident: Spanned<String>,
-    pub variants: Vec<(Spanned<String>, Ty)>,
-}
-
-#[derive(Debug, Clone)]
-pub enum TypeDeclaration {
-    TypeAlias(Spanned<String>, Ty),
-    Record(RecordDeclaration),
-    Sum(SumTypeDeclaration),
+    pub definition: TypeDefinition,
 }
 
 impl TypeDeclaration {
     pub fn ident(&self) -> Spanned<String> {
-        match self {
-            Self::TypeAlias(ident, _) => ident.clone(),
-            Self::Record(r) => r.ident.clone(),
-            Self::Sum(st) => st.ident.clone(),
-        }
+        self.ident.clone()
     }
 }
 

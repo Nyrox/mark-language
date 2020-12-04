@@ -177,6 +177,12 @@ impl Parser<'_> {
 
     pub fn parse_type_decl(&mut self) -> Result<TypeDeclaration, ParsingError> {
         self.expect_token(Token::Type)?;
+
+        let type_parameters = Vec::new();
+        while let Some(_) = self.maybe_expect(&Token::Tick) {
+            type_parameters.push(self.expect_identifier()?);
+        }
+
         let ident = self.expect_identifier()?;
 
         self.expect_token(Token::Equals)?;
@@ -203,15 +209,26 @@ impl Parser<'_> {
                     Token::Pipe,
                 )?;
 
-                Ok(TypeDeclaration::Sum(SumTypeDeclaration { variants, ident }))
+                Ok(TypeDeclaration {
+                    ident,
+                    type_parameters,
+                    definition: TypeDefinition::Sum { variants },
+                })
             }
-            Spanned(Token::LeftBrace, _) => Ok(TypeDeclaration::Record(RecordDeclaration {
+            Spanned(Token::LeftBrace, _) => Ok(TypeDeclaration {
                 ident,
-                fields: self.parse_record_fields()?,
-            })),
+                type_parameters,
+                definition: TypeDefinition::Record {
+                    fields: self.parse_record_fields()?,
+                },
+            }),
             _ => {
                 let ty = self.parse_type()?;
-                Ok(TypeDeclaration::TypeAlias(ident, ty))
+                Ok(TypeDeclaration {
+                    ident,
+                    type_parameters,
+                    definition: TypeDefinition::TypeAlias(ty),
+                })
             }
         }
     }
