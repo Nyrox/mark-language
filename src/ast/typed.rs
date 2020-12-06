@@ -88,12 +88,17 @@ pub enum ResolvedType {
     Function(Box<ResolvedType>, Box<ResolvedType>),
     Tuple(Vec<ResolvedType>),
     List(Box<ResolvedType>),
+    TypeParameter(String),
     Unit,
     Int,
     Float,
     String,
     Bool,
     ErrType, // indicates that type checking previously failed
+}
+
+pub enum Constraint {
+    TypeParameterIsType(String, ResolvedType),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -135,7 +140,7 @@ pub enum ExprT {
     Record(Vec<TypedExpr>),
     ListConstructor(),
     VariantConstructor(TypeHandle, usize),
-    Application(Box<TypedExpr>, Box<TypedExpr>),
+    Application(Box<TypedExpr>, Vec<TypedExpr>),
     Symbol(String),
     FieldAccess(Box<TypedExpr>, usize),
     LetBinding(String, Box<TypedExpr>, Box<TypedExpr>),

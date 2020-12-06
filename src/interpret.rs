@@ -160,33 +160,35 @@ impl Interpreter {
             ExprT::Application(lhs, rhs) => {
                 self.eval_expr(lhs);
 
-                let top = self.pop_val();
-                if let Some(Value::Function(p, curried, body)) = top {
-                    // scoping
-                    self.eval_expr(rhs);
-                    let rv = self.pop_val().unwrap();
-                    let bindings_tmp = self.bindings.clone();
-                    self.bindings.clear();
+                for expr in rhs {
+                    let top = self.pop_val();
+                    if let Some(Value::Function(p, curried, body)) = top {
+                        // scoping
+                        self.eval_expr(expr);
+                        let rv = self.pop_val().unwrap();
+                        let bindings_tmp = self.bindings.clone();
+                        self.bindings.clear();
 
-                    for (i, e) in curried.clone() {
-                        self.bindings.insert(i, e);
+                        for (i, e) in curried.clone() {
+                            self.bindings.insert(i, e);
+                        }
+                        self.bindings.insert((*p).clone(), rv);
+
+                        self.eval_expr(unsafe { &*body });
+
+                        self.bindings = bindings_tmp;
+                    } else if let Some(Value::VariantConstructorFn(th, vi)) = top {
+                        self.eval_expr(expr);
+                        let rv = self.pop_val().unwrap();
+                        self.push_val(Value::Variant(th.clone(), vi, Rc::new(rv)));
+                    } else if let Some(Value::BuiltInFn(f)) = top {
+                        self.eval_expr(expr);
+                        let argv = self.pop_val().unwrap();
+                        self.call_builtin(f, argv);
+                    } else {
+                        dbg!(lhs, &self.stack, &self.bindings);
+                        panic!("Not good")
                     }
-                    self.bindings.insert((*p).clone(), rv);
-
-                    self.eval_expr(unsafe { &*body });
-
-                    self.bindings = bindings_tmp;
-                } else if let Some(Value::VariantConstructorFn(th, vi)) = top {
-                    self.eval_expr(rhs);
-                    let rv = self.pop_val().unwrap();
-                    self.push_val(Value::Variant(th.clone(), vi, Rc::new(rv)));
-                } else if let Some(Value::BuiltInFn(f)) = top {
-                    self.eval_expr(rhs);
-                    let argv = self.pop_val().unwrap();
-                    self.call_builtin(f, argv);
-                } else {
-                    dbg!(lhs, &self.stack, &self.bindings);
-                    panic!("Not good")
                 }
             }
             ExprT::Lambda(p, body) => {

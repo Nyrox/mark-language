@@ -178,7 +178,7 @@ impl Parser<'_> {
     pub fn parse_type_decl(&mut self) -> Result<TypeDeclaration, ParsingError> {
         self.expect_token(Token::Type)?;
 
-        let type_parameters = Vec::new();
+        let mut type_parameters = Vec::new();
         while let Some(_) = self.maybe_expect(&Token::Tick) {
             type_parameters.push(self.expect_identifier()?);
         }
@@ -477,7 +477,13 @@ impl Parser<'_> {
                     }
 
                     let rhs = self.parse_expr_bp(12)?;
-                    lhs = Expr::Application(box lhs, box rhs);
+                    lhs = match lhs {
+                        Expr::Application(lhs, mut args) => {
+                            args.push(rhs);
+                            Expr::Application(lhs, args)
+                        }
+                        _ => Expr::Application(box lhs, vec![rhs]),
+                    };
 
                     continue;
                 }

@@ -104,6 +104,7 @@ type 'a List =
 	| Nil
 
 
+
 map :: ('a -> 'b) -> 'a List -> 'b List
 map f list =
 	match list with
@@ -111,6 +112,12 @@ map f list =
 		List.Cons (f a.0, map f a.1)
 	| Nil ->
 		List.Nil
+
+
+
+main () =
+	let someList: Int List = List.Cons (...)
+	map toString someList
 
 
 main () =
