@@ -5,7 +5,7 @@ pub type Attribute = Spanned<String>;
 #[derive(Debug, Clone)]
 pub enum Ty {
     Tuple(Vec<Ty>),
-    TypeVariable(String),
+    TypeVariable(Spanned<String>),
     Func(Box<Ty>, Box<Ty>),
     TypeRef(Spanned<String>, Option<Spanned<String>>),
     List(Box<Ty>),

@@ -99,13 +99,13 @@ apply oplist init =
 	| Nil -> init
 
 
-type 'a List =
+type List 'a =
 	| Cons of ('a, 'a List)
 	| Nil
 
 
 
-map :: ('a -> 'b) -> 'a List -> 'b List
+map :: ('a -> 'b) -> List 'a -> List 'b
 map f list =
 	match list with
 	| Cons a ->

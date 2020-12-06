@@ -523,6 +523,10 @@ impl Parser<'_> {
 
     pub fn parse_type(&mut self) -> Result<Ty, ParsingError> {
         let lhs = match self.expect_next()?.clone() {
+            Spanned(Token::Tick, _) => {
+                let ident = self.expect_identifier()?;
+                Ok(Ty::TypeVariable(ident))
+            }
             Spanned(Token::LeftParen, _) => {
                 // tuple
                 if self.maybe_expect(&Token::RightParen).is_some() {
