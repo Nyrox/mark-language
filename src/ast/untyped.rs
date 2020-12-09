@@ -8,6 +8,7 @@ pub enum Ty {
     TypeVariable(Spanned<String>),
     Func(Box<Ty>, Box<Ty>),
     TypeRef(Spanned<String>, Option<Spanned<String>>),
+    ConstructedType(Spanned<String>, Vec<Ty>),
     List(Box<Ty>),
     Unit,
     Int,

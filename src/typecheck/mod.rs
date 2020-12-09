@@ -622,6 +622,7 @@ fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> ResolvedType
         Ty::Float => ResolvedType::Float,
         Ty::String => ResolvedType::String,
         Ty::Bool => ResolvedType::Bool,
+        Ty::TypeVariable(p) => ResolvedType::TypeParameter(p.0.clone()),
         _ => {
             eprintln!("Error while trying to resolve type: {:?}", ty);
             ResolvedType::ErrType

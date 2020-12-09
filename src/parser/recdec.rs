@@ -1,4 +1,4 @@
-use super::{Spanned, Token};
+use super::{Position, Span, Spanned, Token};
 use crate::ast::untyped::*;
 
 #[derive(Debug, Clone)]
@@ -178,12 +178,12 @@ impl Parser<'_> {
     pub fn parse_type_decl(&mut self) -> Result<TypeDeclaration, ParsingError> {
         self.expect_token(Token::Type)?;
 
+        let ident = self.expect_identifier()?;
+
         let mut type_parameters = Vec::new();
         while let Some(_) = self.maybe_expect(&Token::Tick) {
             type_parameters.push(self.expect_identifier()?);
         }
-
-        let ident = self.expect_identifier()?;
 
         self.expect_token(Token::Equals)?;
 
@@ -563,7 +563,26 @@ impl Parser<'_> {
                     None
                 };
 
-                Ok(Ty::TypeRef(Spanned(i.clone(), span), attr))
+                let mut type_args = Vec::new();
+                loop {
+                    match self.peek() {
+                        Some(Spanned(Token::Minus, _))
+                        | Some(Spanned(Token::Comma, _))
+                        | Some(Spanned(Token::RightParen, _)) => break,
+                        Some(Spanned(_, next_span))
+                            if self.last_consumed.unwrap().1 .0 .0 == next_span.0 .0 =>
+                        {
+                            type_args.push(self.parse_type()?)
+                        }
+                        _ => break,
+                    }
+                }
+
+                if type_args.len() == 0 {
+                    Ok(Ty::TypeRef(Spanned(i.clone(), span), attr))
+                } else {
+                    Ok(Ty::ConstructedType(Spanned(i.clone(), span), type_args))
+                }
             }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
         }?;

@@ -100,7 +100,7 @@ apply oplist init =
 
 
 type List 'a =
-	| Cons of ('a, 'a List)
+	| Cons of ('a, List 'a)
 	| Nil
 
 
@@ -116,8 +116,8 @@ map f list =
 
 
 main () =
-	let someList: Int List = List.Cons (...)
-	map toString someList
+	let someList = List.Cons ("yo", List.Nil)
+	map (\x -> print x) someList
 
 
 main () =
