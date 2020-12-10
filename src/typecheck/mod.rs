@@ -324,8 +324,10 @@ fn infer_application(
                     typed_exprs.push(check_type(ctx, expr, lt));
 
                     if let ResolvedType::Function(na, nb) = rt.as_ref() {
-                        lt = na;
-                        rt = nb;
+                        if i != exprs.len() - 1 {
+                            lt = na;
+                            rt = nb;
+                        }
                     } else if i != exprs.len() - 1 {
                         return TypeJudgement::Error(TypeCheckingError::GenericError(
                             "too many arguments in function application".into(),
@@ -623,6 +625,9 @@ fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> ResolvedType
         Ty::String => ResolvedType::String,
         Ty::Bool => ResolvedType::Bool,
         Ty::TypeVariable(p) => ResolvedType::TypeParameter(p.0.clone()),
+        Ty::ConstructedType(s, tys) => {
+            
+        }
         _ => {
             eprintln!("Error while trying to resolve type: {:?}", ty);
             ResolvedType::ErrType
