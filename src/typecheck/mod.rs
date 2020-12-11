@@ -53,10 +53,19 @@ impl TypeCheckingError {
 pub struct TypecheckingContext {
     pub environment: Rc<RefCell<TypeEnvironment>>,
     pub symbols: HashMap<String, ResolvedType>,
+    pub scopes: HashMap<String, TypecheckingContext>,
     variant: Option<String>,
 }
 
 impl TypecheckingContext {
+    pub fn new() -> Self {
+        Self {
+            environment: Rc::new(RefCell::new(TypeEnvironment::new())),
+            symbols: HashMap::new(),
+            scopes: HashMap::new(),
+            variant: None,
+        }
+    }
     pub fn insert_type_def(&self, td: TypeDefinition) -> TypeHandle {
         let th = TypeHandle {
             qualified_name: td.qualified_name(),
@@ -292,11 +301,17 @@ fn check_type(
             )),
         },
         _ => {
-            let ((e, t), constraints) = infer_type(ctx, expr)?;
+            let ((e, t), mut constraints) = infer_type(ctx, expr)?;
 
             if &t == ty {
                 TypeJudgement::Typed {
                     inner: (e, t),
+                    constraints,
+                }
+            } else if let ResolvedType::TypeParameter(p) = t {
+                constraints.push(Constraint::TypeParameterIsType(p, ty.clone()));
+                TypeJudgement::Typed {
+                    inner: (e, ty.clone()),
                     constraints,
                 }
             } else {
@@ -343,6 +358,10 @@ fn infer_application(
             } else {
                 TypeJudgement::Error(TypeCheckingError::ExpectedFunctionType(lhs.span()))
             }
+        })
+        .map_with_constraints(|(lhs, (exprs, rt)), constraints| {
+            dbg!(constraints);
+            ((lhs, (exprs, rt)), vec![])
         })
         .map(|(lhs, (exprs, rt))| (ExprT::Application(box lhs, exprs), rt.as_ref().clone()))
 }
@@ -625,8 +644,25 @@ fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> ResolvedType
         Ty::String => ResolvedType::String,
         Ty::Bool => ResolvedType::Bool,
         Ty::TypeVariable(p) => ResolvedType::TypeParameter(p.0.clone()),
-        Ty::ConstructedType(s, tys) => {
-            
+        Ty::ConstructedType(n, p) => {
+            let t = ctx
+                .environment
+                .borrow()
+                .type_constructors
+                .get(&n.0)
+                .cloned();
+            if let Some(t) = t {
+                if p.len() == t.type_parameters.len() {
+                    ResolvedType::ConstructedType(
+                        n.0.clone(),
+                        p.iter().map(|t| resolve_type(ctx, t)).collect(),
+                    )
+                } else {
+                    panic!("asdnz")
+                }
+            } else {
+                panic!("{:?} not found", n)
+            }
         }
         _ => {
             eprintln!("Error while trying to resolve type: {:?}", ty);
@@ -638,24 +674,76 @@ fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> ResolvedType
 fn typecheck_type_decl(ctx: &mut TypecheckingContext, decl: untyped::TypeDeclaration) {
     use untyped::TypeDeclaration;
 
-    let ident = Rc::new(decl.ident.0);
+    let ident = Rc::new(decl.ident.0.clone());
 
     match decl.definition {
-        untyped::TypeDefinition::Sum { variants } => {
-            let th = ctx.insert_type_def(TypeDefinition::Sum {
-                qualified_name: ident.clone(),
-                variants: Vec::new(),
-            });
+        untyped::TypeDefinition::Sum { ref variants } => {
+            if decl.type_parameters.is_empty() {
+                let th = ctx.insert_type_def(TypeDefinition::Sum {
+                    qualified_name: ident.clone(),
+                    variants: Vec::new(),
+                });
 
-            let variants = variants
-                .iter()
-                .map(|(v, t)| (v.0.clone(), resolve_type(ctx, t)))
-                .collect();
+                let variants = variants
+                    .iter()
+                    .map(|(v, t)| (v.0.clone(), resolve_type(ctx, t)))
+                    .collect();
 
-            ctx.environment.borrow_mut().types[th.index] = TypeDefinition::Sum {
-                qualified_name: ident.clone(),
-                variants,
-            };
+                ctx.environment.borrow_mut().types[th.index] = TypeDefinition::Sum {
+                    qualified_name: ident.clone(),
+                    variants,
+                };
+            } else {
+                ctx.environment.borrow_mut().type_constructors.insert(
+                    ident.as_ref().clone(),
+                    TypeConstructor {
+                        type_parameters: decl.type_parameters.iter().map(|s| s.0.clone()).collect(),
+                        type_definition: TypeDefinition::Sum {
+                            qualified_name: ident.clone(),
+                            variants: Vec::new(),
+                        },
+                    },
+                );
+
+                ctx.scopes
+                    .insert(ident.as_ref().clone(), TypecheckingContext::new());
+
+                let variants = variants
+                    .iter()
+                    .map(|(v, t)| (v.0.clone(), resolve_type(ctx, t)))
+                    .collect::<Vec<_>>();
+                let variants = variants
+                    .into_iter()
+                    .map(|(v, t)| {
+                        let scope = ctx.scopes.get_mut(ident.as_ref()).unwrap();
+                        scope.symbols.insert(
+                            v.clone(),
+                            ResolvedType::Function(
+                                box t.clone(),
+                                box ResolvedType::ConstructedType(
+                                    ident.as_ref().clone(),
+                                    decl.type_parameters
+                                        .iter()
+                                        .map(|s| ResolvedType::TypeParameter(s.0.clone()))
+                                        .collect(),
+                                ),
+                            ),
+                        );
+
+                        (v, t)
+                    })
+                    .collect();
+
+                ctx.environment
+                    .borrow_mut()
+                    .type_constructors
+                    .get_mut(ident.as_ref())
+                    .unwrap()
+                    .type_definition = TypeDefinition::Sum {
+                    qualified_name: ident.clone(),
+                    variants,
+                };
+            }
         }
         untyped::TypeDefinition::Record { fields } => {
             let td = TypeDefinition::Record {
@@ -735,11 +823,7 @@ pub fn generate_closed_typeclass_instance(
 }
 
 pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingError>> {
-    let mut checking_context = TypecheckingContext {
-        environment: Rc::new(RefCell::new(TypeEnvironment::new())),
-        symbols: HashMap::new(),
-        variant: None,
-    };
+    let mut checking_context = TypecheckingContext::new();
 
     let builtins = &[
         ("File_read", BuiltInFn::FileRead),
@@ -780,13 +864,18 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
             }
             Declaration::Binding(ident, expr) => {
                 if let Some(expected) = checking_context.symbols.get(&ident.0).cloned() {
-                    check_type(&mut checking_context, &expr, &expected)
-                        .map(|(e, t)| {
-                            bindings.insert(ident.0.clone(), (e.clone(), t.clone()));
-                            checking_context.symbols.insert(ident.0.clone(), t.clone());
-                            (e, t)
-                        })
-                        .iter_err(|err| errors.push(err.clone()));
+                    checking_context
+                        .symbols
+                        .insert(ident.0.clone(), expected.clone());
+
+                    if false == expected.is_generic() {
+                        check_type(&mut checking_context, &expr, &expected)
+                            .map(|(e, t)| {
+                                bindings.insert(ident.0.clone(), (e.clone(), t.clone()));
+                                (e, t)
+                            })
+                            .iter_err(|err| errors.push(err.clone()));
+                    }
                 } else {
                     infer_type(&mut checking_context, &expr)
                         .map(|(e, t)| {

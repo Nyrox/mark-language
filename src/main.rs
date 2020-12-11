@@ -26,7 +26,6 @@ fn main() {
 
             let ast = parser::Parser::new(&tokens).parse().unwrap();
 
-            
             std::fs::write("ast.ron", format!("{:#?}", &ast)).ok();
 
             let typechecked = match typecheck::typecheck(ast) {

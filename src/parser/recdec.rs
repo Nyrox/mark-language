@@ -521,8 +521,8 @@ impl Parser<'_> {
         Ok(lhs)
     }
 
-    pub fn parse_type(&mut self) -> Result<Ty, ParsingError> {
-        let lhs = match self.expect_next()?.clone() {
+    pub fn parse_type_atom(&mut self) -> Result<Ty, ParsingError> {
+        match self.expect_next()?.clone() {
             Spanned(Token::Tick, _) => {
                 let ident = self.expect_identifier()?;
                 Ok(Ty::TypeVariable(ident))
@@ -572,7 +572,7 @@ impl Parser<'_> {
                         Some(Spanned(_, next_span))
                             if self.last_consumed.unwrap().1 .0 .0 == next_span.0 .0 =>
                         {
-                            type_args.push(self.parse_type()?)
+                            type_args.push(self.parse_type_atom()?)
                         }
                         _ => break,
                     }
@@ -585,7 +585,11 @@ impl Parser<'_> {
                 }
             }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
-        }?;
+        }
+    }
+
+    pub fn parse_type(&mut self) -> Result<Ty, ParsingError> {
+        let lhs = self.parse_type_atom()?;
 
         if self.maybe_expect(&Token::Minus).is_some() {
             self.expect_token(Token::Greater)?;

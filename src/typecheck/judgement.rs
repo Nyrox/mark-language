@@ -53,6 +53,22 @@ impl<T1> TypeJudgement<T1> {
         }
     }
 
+    pub fn map_with_constraints<T2, F>(self, f: F) -> TypeJudgement<T2>
+    where
+        F: FnOnce(T1, Vec<Constraint>) -> (T2, Vec<Constraint>),
+    {
+        match self {
+            TypeJudgement::Typed { inner, constraints } => {
+                let (ni, nc) = f(inner, constraints);
+                TypeJudgement::Typed {
+                    inner: ni,
+                    constraints: nc,
+                }
+            }
+            TypeJudgement::Error(e) => TypeJudgement::Error(e),
+        }
+    }
+
     pub fn iter_err<F>(self, f: F) -> Self
     where
         F: FnOnce(&TypeCheckingError) -> (),

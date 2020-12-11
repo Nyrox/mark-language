@@ -33,9 +33,16 @@ impl TypeDefinition {
 }
 
 #[derive(Debug, Clone)]
+pub struct TypeConstructor {
+    pub type_definition: TypeDefinition,
+    pub type_parameters: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct TypeEnvironment {
     pub types: Vec<TypeDefinition>,
     pub type_aliases: HashMap<String, ResolvedType>,
+    pub type_constructors: HashMap<String, TypeConstructor>,
 }
 
 impl TypeEnvironment {
@@ -43,6 +50,7 @@ impl TypeEnvironment {
         Self {
             types: Vec::new(),
             type_aliases: HashMap::new(),
+            type_constructors: HashMap::new(),
         }
     }
 }
@@ -85,6 +93,7 @@ pub struct TypeClassImplItem {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResolvedType {
     TypeHandle(TypeHandle),
+    ConstructedType(String, Vec<ResolvedType>),
     Function(Box<ResolvedType>, Box<ResolvedType>),
     Tuple(Vec<ResolvedType>),
     List(Box<ResolvedType>),
@@ -97,6 +106,28 @@ pub enum ResolvedType {
     ErrType, // indicates that type checking previously failed
 }
 
+impl ResolvedType {
+    pub fn is_generic(&self) -> bool {
+        use ResolvedType::*;
+
+        match self {
+            TypeParameter(_) => true,
+            ConstructedType(_, tys) => tys
+                .iter()
+                .map(|t| t.is_generic())
+                .fold(false, |acc, a| acc || a),
+            Function(l, r) => l.is_generic() || r.is_generic(),
+            Tuple(tys) => tys
+                .iter()
+                .map(|t| t.is_generic())
+                .fold(false, |acc, a| acc || a),
+            List(t) => t.is_generic(),
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Constraint {
     TypeParameterIsType(String, ResolvedType),
 }
