@@ -90,6 +90,27 @@ pub struct TypeClassImplItem {
     pub body: untyped::Expr,
 }
 
+#[derive(Debug, Clone)]
+pub enum TypeConstructor {
+	Tuple(usize),
+	UserType(TypeHandle),
+	Int,
+	String,
+	Bool,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct ResolvedType {
+	constructor: TypeConstructor,
+	type_parameters: Vec<ResolvedType>,
+}
+
+pub enum Type {
+	TypeVariable(String),
+	ConstructedType(TypeConstructor, Vec<Type>),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResolvedType {
     TypeHandle(TypeHandle),
