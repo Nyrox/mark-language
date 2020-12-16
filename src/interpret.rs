@@ -31,7 +31,16 @@ impl Interpreter {
     }
 
     pub fn call_fn(&mut self, f: &str) {
-        let (e, _t) = self.program.bindings.get(f).unwrap();
+        let (e, _t) = {
+            let env = self.program.environment.borrow();
+
+            env.root_scope
+                .bindings
+                .get(f)
+                .expect(&format!("function not found: {}", f))
+                .clone()
+        };
+
         if let ExprT::Lambda(_p, body) = e.clone() {
             self.eval_expr(&body)
         } else {
@@ -186,7 +195,7 @@ impl Interpreter {
                         let argv = self.pop_val().unwrap();
                         self.call_builtin(f, argv);
                     } else {
-                        dbg!(lhs, &self.stack, &self.bindings);
+                        dbg!(lhs, top, &self.stack, &self.bindings);
                         panic!("Not good")
                     }
                 }
@@ -209,7 +218,15 @@ impl Interpreter {
                 }
             }
             ExprT::Symbol(s) => {
-                if let Some(b) = self.program.bindings.get(s) {
+                let b = self
+                    .program
+                    .environment
+                    .borrow()
+                    .root_scope
+                    .bindings
+                    .get(s)
+                    .cloned();
+                if let Some(b) = b {
                     if let (ExprT::Lambda(p, body), _) = b {
                         self.push_val(Value::Function(
                             Rc::new(p.clone()),
@@ -217,14 +234,14 @@ impl Interpreter {
                             body.as_ref() as *const TypedExpr,
                         ));
                     } else if let (ExprT::BuiltInFn(f), _) = b {
-                        self.push_val(Value::BuiltInFn(*f));
+                        self.push_val(Value::BuiltInFn(f));
                     } else {
                         panic!()
                     }
                 } else if let Some(b) = self.bindings.get(s).cloned() {
                     self.push_val(b);
                 } else {
-                    panic!()
+                    panic!("{:?}", s)
                 }
             }
             ExprT::Record(fields) => {
@@ -281,9 +298,7 @@ impl Interpreter {
                 let t = self.program.environment.borrow().types[th.index].clone();
                 if let TypeDefinition::Sum { variants, .. } = t {
                     let (_n, vt) = &variants[*vi];
-                    if let ResolvedType::Unit = vt {
-                        self.push_val(Value::Variant(th.clone(), *vi, Rc::new(Value::Unit)));
-                    } else {
+                    {
                         self.push_val(Value::VariantConstructorFn(th.clone(), *vi));
                     }
                 } else {

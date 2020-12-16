@@ -13,6 +13,13 @@ pub enum TypeJudgement<T> {
 }
 
 impl<T1> TypeJudgement<T1> {
+    pub fn new(inner: T1) -> TypeJudgement<T1> {
+        TypeJudgement::Typed {
+            inner,
+            constraints: Vec::new(),
+        }
+    }
+
     pub fn ok(self) -> Option<T1> {
         match self {
             TypeJudgement::Typed { inner, .. } => Some(inner),
