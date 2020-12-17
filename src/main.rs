@@ -36,6 +36,8 @@ fn main() {
                 }
             };
 
+            std::fs::write("typed_ast.ron", format!("{:#?}", &typechecked)).ok();
+
             interpret::interpret(typechecked);
         })
         .unwrap();

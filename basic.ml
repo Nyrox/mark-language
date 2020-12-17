@@ -97,8 +97,6 @@ type List 'a =
 	| Cons of ('a, List 'a)
 	| Nil
 
-
-
 map :: ('a -> 'b) -> List 'a -> List 'b
 map f list =
 	match list with
@@ -107,10 +105,8 @@ map f list =
 	| Nil ->
 		List.Nil ()
 
-
-
 main () =
-	let someList = List.Cons ("yo", List.Nil ())
+	let someList = List.Cons ("yo", List.Cons (5, List.Nil ()))
 	map (\x -> print x) someList
 
 

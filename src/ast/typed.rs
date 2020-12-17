@@ -124,7 +124,7 @@ impl TypeConstructor {
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Type {
-    TypeVariable(String),
+    TypeVariable(u32),
     ConstructedType(TypeConstructor, Vec<Type>),
     ErrType, // indicates that type checking failed
 }
@@ -194,7 +194,7 @@ impl Type {
 
 #[derive(Debug, Clone)]
 pub enum Constraint {
-    TypeParameterIsType(String, Type),
+    TypeParameterIsType(u32, Type),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -229,23 +229,22 @@ impl BuiltInFn {
 
 #[derive(Debug, Clone)]
 pub enum ExprT {
+    Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
     Lambda(String, Box<TypedExpr>),
-    StringLiteral(String),
+    BinaryOp(untyped::Operator, Box<TypedExpr>, Box<TypedExpr>),
+    MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
     Record(Vec<TypedExpr>),
-    ListConstructor(),
-    VariantConstructor(TypeHandle, usize),
+    Tuple(Vec<TypedExpr>),
     Application(Box<TypedExpr>, Vec<TypedExpr>),
-    Symbol(String),
     FieldAccess(Box<TypedExpr>, usize),
     LetBinding(String, Box<TypedExpr>, Box<TypedExpr>),
-    Tuple(Vec<TypedExpr>),
-    Unit,
-    MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
-    BinaryOp(untyped::Operator, Box<TypedExpr>, Box<TypedExpr>),
+    Symbol(String),
+    VariantConstructor(TypeHandle, usize),
+    StringLiteral(String),
     IntegerLiteral(i64),
     BooleanLiteral(bool),
-    Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
     BuiltInFn(BuiltInFn),
+    Unit,
 }
 
 pub type TypedExpr = (ExprT, Type);

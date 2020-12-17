@@ -1,0 +1,1711 @@
+TypeChecked {
+    environment: RefCell {
+        value: TypeEnvironment {
+            root_scope: Scope {
+                bindings: {
+                    "printi": (
+                        BuiltInFn(
+                            Printi,
+                        ),
+                        Function [
+                            Int ,
+                            Unit ,
+                        ],
+                    ),
+                    "String_parse_int": (
+                        BuiltInFn(
+                            StringParseInt,
+                        ),
+                        Function [
+                            String ,
+                            Int ,
+                        ],
+                    ),
+                    "test": (
+                        Lambda(
+                            "f",
+                            (
+                                Lambda(
+                                    "c",
+                                    (
+                                        LetBinding(
+                                            "r",
+                                            (
+                                                Application(
+                                                    (
+                                                        Symbol(
+                                                            "f",
+                                                        ),
+                                                        Function [
+                                                            Unit ,
+                                                            Tuple(2) [
+                                                                String ,
+                                                                String ,
+                                                            ],
+                                                        ],
+                                                    ),
+                                                    [
+                                                        (
+                                                            Unit,
+                                                            Unit ,
+                                                        ),
+                                                    ],
+                                                ),
+                                                Tuple(2) [
+                                                    String ,
+                                                    String ,
+                                                ],
+                                            ),
+                                            (
+                                                Tuple(
+                                                    [
+                                                        (
+                                                            FieldAccess(
+                                                                (
+                                                                    Symbol(
+                                                                        "r",
+                                                                    ),
+                                                                    Tuple(2) [
+                                                                        String ,
+                                                                        String ,
+                                                                    ],
+                                                                ),
+                                                                0,
+                                                            ),
+                                                            String ,
+                                                        ),
+                                                        (
+                                                            FieldAccess(
+                                                                (
+                                                                    Symbol(
+                                                                        "r",
+                                                                    ),
+                                                                    Tuple(2) [
+                                                                        String ,
+                                                                        String ,
+                                                                    ],
+                                                                ),
+                                                                1,
+                                                            ),
+                                                            String ,
+                                                        ),
+                                                        (
+                                                            Symbol(
+                                                                "c",
+                                                            ),
+                                                            String ,
+                                                        ),
+                                                    ],
+                                                ),
+                                                Tuple(3) [
+                                                    String ,
+                                                    String ,
+                                                    String ,
+                                                ],
+                                            ),
+                                        ),
+                                        Tuple(3) [
+                                            String ,
+                                            String ,
+                                            String ,
+                                        ],
+                                    ),
+                                ),
+                                Function [
+                                    String ,
+                                    Tuple(3) [
+                                        String ,
+                                        String ,
+                                        String ,
+                                    ],
+                                ],
+                            ),
+                        ),
+                        Function [
+                            Function [
+                                Unit ,
+                                Tuple(2) [
+                                    String ,
+                                    String ,
+                                ],
+                            ],
+                            Function [
+                                String ,
+                                Tuple(3) [
+                                    String ,
+                                    String ,
+                                    String ,
+                                ],
+                            ],
+                        ],
+                    ),
+                    "File_read": (
+                        BuiltInFn(
+                            FileRead,
+                        ),
+                        Function [
+                            String ,
+                            String ,
+                        ],
+                    ),
+                    "double": (
+                        Lambda(
+                            "x",
+                            (
+                                BinaryOp(
+                                    BinOpAdd,
+                                    (
+                                        Symbol(
+                                            "x",
+                                        ),
+                                        Int ,
+                                    ),
+                                    (
+                                        Symbol(
+                                            "x",
+                                        ),
+                                        Int ,
+                                    ),
+                                ),
+                                Int ,
+                            ),
+                        ),
+                        Function [
+                            Int ,
+                            Int ,
+                        ],
+                    ),
+                    "test_cond": (
+                        Lambda(
+                            "i",
+                            (
+                                Conditional(
+                                    (
+                                        BinaryOp(
+                                            BinOpGreater,
+                                            (
+                                                Symbol(
+                                                    "i",
+                                                ),
+                                                Int ,
+                                            ),
+                                            (
+                                                IntegerLiteral(
+                                                    5,
+                                                ),
+                                                Int ,
+                                            ),
+                                        ),
+                                        Bool ,
+                                    ),
+                                    (
+                                        BinaryOp(
+                                            BinOpAdd,
+                                            (
+                                                Symbol(
+                                                    "i",
+                                                ),
+                                                Int ,
+                                            ),
+                                            (
+                                                Symbol(
+                                                    "i",
+                                                ),
+                                                Int ,
+                                            ),
+                                        ),
+                                        Int ,
+                                    ),
+                                    (
+                                        BinaryOp(
+                                            BinOpMul,
+                                            (
+                                                Symbol(
+                                                    "i",
+                                                ),
+                                                Int ,
+                                            ),
+                                            (
+                                                Symbol(
+                                                    "i",
+                                                ),
+                                                Int ,
+                                            ),
+                                        ),
+                                        Int ,
+                                    ),
+                                ),
+                                Int ,
+                            ),
+                        ),
+                        Function [
+                            Int ,
+                            Int ,
+                        ],
+                    ),
+                    "test_curry": (
+                        Lambda(
+                            "a",
+                            (
+                                Lambda(
+                                    "b",
+                                    (
+                                        Lambda(
+                                            "_",
+                                            (
+                                                Tuple(
+                                                    [
+                                                        (
+                                                            Symbol(
+                                                                "a",
+                                                            ),
+                                                            String ,
+                                                        ),
+                                                        (
+                                                            Symbol(
+                                                                "b",
+                                                            ),
+                                                            String ,
+                                                        ),
+                                                    ],
+                                                ),
+                                                Tuple(2) [
+                                                    String ,
+                                                    String ,
+                                                ],
+                                            ),
+                                        ),
+                                        Function [
+                                            Unit ,
+                                            Tuple(2) [
+                                                String ,
+                                                String ,
+                                            ],
+                                        ],
+                                    ),
+                                ),
+                                Function [
+                                    String ,
+                                    Function [
+                                        Unit ,
+                                        Tuple(2) [
+                                            String ,
+                                            String ,
+                                        ],
+                                    ],
+                                ],
+                            ),
+                        ),
+                        Function [
+                            String ,
+                            Function [
+                                String ,
+                                Function [
+                                    Unit ,
+                                    Tuple(2) [
+                                        String ,
+                                        String ,
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ),
+                    "map": (
+                        Lambda(
+                            "f",
+                            (
+                                Lambda(
+                                    "list",
+                                    (
+                                        MatchSum(
+                                            (
+                                                Symbol(
+                                                    "list",
+                                                ),
+                                                UserType(UT:List) [
+                                                    '0,
+                                                ],
+                                            ),
+                                            [
+                                                (
+                                                    0,
+                                                    Some(
+                                                        "a",
+                                                    ),
+                                                    (
+                                                        Application(
+                                                            (
+                                                                VariantConstructor(
+                                                                    UT:List,
+                                                                    0,
+                                                                ),
+                                                                Function [
+                                                                    Tuple(2) [
+                                                                        '0,
+                                                                        UserType(UT:List) [
+                                                                            '0,
+                                                                        ],
+                                                                    ],
+                                                                    UserType(UT:List) [
+                                                                        '0,
+                                                                    ],
+                                                                ],
+                                                            ),
+                                                            [
+                                                                (
+                                                                    Tuple(
+                                                                        [
+                                                                            (
+                                                                                Application(
+                                                                                    (
+                                                                                        Symbol(
+                                                                                            "f",
+                                                                                        ),
+                                                                                        Function [
+                                                                                            '0,
+                                                                                            '0,
+                                                                                        ],
+                                                                                    ),
+                                                                                    [
+                                                                                        (
+                                                                                            FieldAccess(
+                                                                                                (
+                                                                                                    Symbol(
+                                                                                                        "a",
+                                                                                                    ),
+                                                                                                    Tuple(2) [
+                                                                                                        '0,
+                                                                                                        UserType(UT:List) [
+                                                                                                            '0,
+                                                                                                        ],
+                                                                                                    ],
+                                                                                                ),
+                                                                                                0,
+                                                                                            ),
+                                                                                            '0,
+                                                                                        ),
+                                                                                    ],
+                                                                                ),
+                                                                                '0,
+                                                                            ),
+                                                                            (
+                                                                                Application(
+                                                                                    (
+                                                                                        Symbol(
+                                                                                            "map",
+                                                                                        ),
+                                                                                        Function [
+                                                                                            Function [
+                                                                                                '0,
+                                                                                                '0,
+                                                                                            ],
+                                                                                            Function [
+                                                                                                UserType(UT:List) [
+                                                                                                    '0,
+                                                                                                ],
+                                                                                                UserType(UT:List) [
+                                                                                                    '0,
+                                                                                                ],
+                                                                                            ],
+                                                                                        ],
+                                                                                    ),
+                                                                                    [
+                                                                                        (
+                                                                                            Symbol(
+                                                                                                "f",
+                                                                                            ),
+                                                                                            Function [
+                                                                                                '0,
+                                                                                                '0,
+                                                                                            ],
+                                                                                        ),
+                                                                                        (
+                                                                                            FieldAccess(
+                                                                                                (
+                                                                                                    Symbol(
+                                                                                                        "a",
+                                                                                                    ),
+                                                                                                    Tuple(2) [
+                                                                                                        '0,
+                                                                                                        UserType(UT:List) [
+                                                                                                            '0,
+                                                                                                        ],
+                                                                                                    ],
+                                                                                                ),
+                                                                                                1,
+                                                                                            ),
+                                                                                            UserType(UT:List) [
+                                                                                                '0,
+                                                                                            ],
+                                                                                        ),
+                                                                                    ],
+                                                                                ),
+                                                                                UserType(UT:List) [
+                                                                                    '0,
+                                                                                ],
+                                                                            ),
+                                                                        ],
+                                                                    ),
+                                                                    Tuple(2) [
+                                                                        '0,
+                                                                        UserType(UT:List) [
+                                                                            '0,
+                                                                        ],
+                                                                    ],
+                                                                ),
+                                                            ],
+                                                        ),
+                                                        UserType(UT:List) [
+                                                            '0,
+                                                        ],
+                                                    ),
+                                                ),
+                                                (
+                                                    1,
+                                                    None,
+                                                    (
+                                                        Application(
+                                                            (
+                                                                VariantConstructor(
+                                                                    UT:List,
+                                                                    1,
+                                                                ),
+                                                                Function [
+                                                                    Unit ,
+                                                                    UserType(UT:List) [
+                                                                        '0,
+                                                                    ],
+                                                                ],
+                                                            ),
+                                                            [
+                                                                (
+                                                                    Unit,
+                                                                    Unit ,
+                                                                ),
+                                                            ],
+                                                        ),
+                                                        UserType(UT:List) [
+                                                            '0,
+                                                        ],
+                                                    ),
+                                                ),
+                                            ],
+                                        ),
+                                        UserType(UT:List) [
+                                            '0,
+                                        ],
+                                    ),
+                                ),
+                                Function [
+                                    UserType(UT:List) [
+                                        '0,
+                                    ],
+                                    UserType(UT:List) [
+                                        '0,
+                                    ],
+                                ],
+                            ),
+                        ),
+                        Function [
+                            Function [
+                                '0,
+                                '0,
+                            ],
+                            Function [
+                                UserType(UT:List) [
+                                    '0,
+                                ],
+                                UserType(UT:List) [
+                                    '0,
+                                ],
+                            ],
+                        ],
+                    ),
+                    "main": (
+                        Lambda(
+                            "_",
+                            (
+                                LetBinding(
+                                    "someList",
+                                    (
+                                        Application(
+                                            (
+                                                VariantConstructor(
+                                                    UT:List,
+                                                    0,
+                                                ),
+                                                Function [
+                                                    Tuple(2) [
+                                                        '0,
+                                                        UserType(UT:List) [
+                                                            '0,
+                                                        ],
+                                                    ],
+                                                    UserType(UT:List) [
+                                                        '0,
+                                                    ],
+                                                ],
+                                            ),
+                                            [
+                                                (
+                                                    Tuple(
+                                                        [
+                                                            (
+                                                                StringLiteral(
+                                                                    "yo",
+                                                                ),
+                                                                String ,
+                                                            ),
+                                                            (
+                                                                Application(
+                                                                    (
+                                                                        VariantConstructor(
+                                                                            UT:List,
+                                                                            0,
+                                                                        ),
+                                                                        Function [
+                                                                            Tuple(2) [
+                                                                                '0,
+                                                                                UserType(UT:List) [
+                                                                                    '0,
+                                                                                ],
+                                                                            ],
+                                                                            UserType(UT:List) [
+                                                                                '0,
+                                                                            ],
+                                                                        ],
+                                                                    ),
+                                                                    [
+                                                                        (
+                                                                            Tuple(
+                                                                                [
+                                                                                    (
+                                                                                        IntegerLiteral(
+                                                                                            5,
+                                                                                        ),
+                                                                                        Int ,
+                                                                                    ),
+                                                                                    (
+                                                                                        Application(
+                                                                                            (
+                                                                                                VariantConstructor(
+                                                                                                    UT:List,
+                                                                                                    1,
+                                                                                                ),
+                                                                                                Function [
+                                                                                                    Unit ,
+                                                                                                    UserType(UT:List) [
+                                                                                                        '0,
+                                                                                                    ],
+                                                                                                ],
+                                                                                            ),
+                                                                                            [
+                                                                                                (
+                                                                                                    Unit,
+                                                                                                    Unit ,
+                                                                                                ),
+                                                                                            ],
+                                                                                        ),
+                                                                                        UserType(UT:List) [
+                                                                                            '0,
+                                                                                        ],
+                                                                                    ),
+                                                                                ],
+                                                                            ),
+                                                                            Tuple(2) [
+                                                                                '0,
+                                                                                UserType(UT:List) [
+                                                                                    '0,
+                                                                                ],
+                                                                            ],
+                                                                        ),
+                                                                    ],
+                                                                ),
+                                                                UserType(UT:List) [
+                                                                    '0,
+                                                                ],
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    Tuple(2) [
+                                                        '0,
+                                                        UserType(UT:List) [
+                                                            '0,
+                                                        ],
+                                                    ],
+                                                ),
+                                            ],
+                                        ),
+                                        UserType(UT:List) [
+                                            '0,
+                                        ],
+                                    ),
+                                    (
+                                        Application(
+                                            (
+                                                Symbol(
+                                                    "map",
+                                                ),
+                                                Function [
+                                                    Function [
+                                                        '0,
+                                                        '0,
+                                                    ],
+                                                    Function [
+                                                        UserType(UT:List) [
+                                                            '0,
+                                                        ],
+                                                        UserType(UT:List) [
+                                                            '0,
+                                                        ],
+                                                    ],
+                                                ],
+                                            ),
+                                            [
+                                                (
+                                                    Lambda(
+                                                        "x",
+                                                        (
+                                                            Application(
+                                                                (
+                                                                    BuiltInFn(
+                                                                        Print,
+                                                                    ),
+                                                                    Function [
+                                                                        String ,
+                                                                        Unit ,
+                                                                    ],
+                                                                ),
+                                                                [
+                                                                    (
+                                                                        Symbol(
+                                                                            "x",
+                                                                        ),
+                                                                        String ,
+                                                                    ),
+                                                                ],
+                                                            ),
+                                                            Unit ,
+                                                        ),
+                                                    ),
+                                                    Function [
+                                                        '0,
+                                                        '0,
+                                                    ],
+                                                ),
+                                                (
+                                                    Symbol(
+                                                        "someList",
+                                                    ),
+                                                    UserType(UT:List) [
+                                                        '0,
+                                                    ],
+                                                ),
+                                            ],
+                                        ),
+                                        UserType(UT:List) [
+                                            '0,
+                                        ],
+                                    ),
+                                ),
+                                UserType(UT:List) [
+                                    '0,
+                                ],
+                            ),
+                        ),
+                        Function [
+                            Unit ,
+                            UserType(UT:List) [
+                                '0,
+                            ],
+                        ],
+                    ),
+                    "String_get_first": (
+                        BuiltInFn(
+                            StringGetFirst,
+                        ),
+                        Function [
+                            String ,
+                            Tuple(2) [
+                                String ,
+                                String ,
+                            ],
+                        ],
+                    ),
+                    "main_options": (
+                        Lambda(
+                            "_",
+                            (
+                                LetBinding(
+                                    "opt",
+                                    (
+                                        Application(
+                                            (
+                                                VariantConstructor(
+                                                    UT:SOption,
+                                                    0,
+                                                ),
+                                                Function [
+                                                    String ,
+                                                    UserType(UT:SOption) ,
+                                                ],
+                                            ),
+                                            [
+                                                (
+                                                    StringLiteral(
+                                                        "din mor",
+                                                    ),
+                                                    String ,
+                                                ),
+                                            ],
+                                        ),
+                                        UserType(UT:SOption) ,
+                                    ),
+                                    (
+                                        MatchSum(
+                                            (
+                                                Symbol(
+                                                    "opt",
+                                                ),
+                                                UserType(UT:SOption) ,
+                                            ),
+                                            [
+                                                (
+                                                    0,
+                                                    Some(
+                                                        "s",
+                                                    ),
+                                                    (
+                                                        FieldAccess(
+                                                            (
+                                                                Application(
+                                                                    (
+                                                                        Symbol(
+                                                                            "test",
+                                                                        ),
+                                                                        Function [
+                                                                            Function [
+                                                                                Unit ,
+                                                                                Tuple(2) [
+                                                                                    String ,
+                                                                                    String ,
+                                                                                ],
+                                                                            ],
+                                                                            Function [
+                                                                                String ,
+                                                                                Tuple(3) [
+                                                                                    String ,
+                                                                                    String ,
+                                                                                    String ,
+                                                                                ],
+                                                                            ],
+                                                                        ],
+                                                                    ),
+                                                                    [
+                                                                        (
+                                                                            Application(
+                                                                                (
+                                                                                    Symbol(
+                                                                                        "test_curry",
+                                                                                    ),
+                                                                                    Function [
+                                                                                        String ,
+                                                                                        Function [
+                                                                                            String ,
+                                                                                            Function [
+                                                                                                Unit ,
+                                                                                                Tuple(2) [
+                                                                                                    String ,
+                                                                                                    String ,
+                                                                                                ],
+                                                                                            ],
+                                                                                        ],
+                                                                                    ],
+                                                                                ),
+                                                                                [
+                                                                                    (
+                                                                                        StringLiteral(
+                                                                                            "din",
+                                                                                        ),
+                                                                                        String ,
+                                                                                    ),
+                                                                                    (
+                                                                                        StringLiteral(
+                                                                                            "mor",
+                                                                                        ),
+                                                                                        String ,
+                                                                                    ),
+                                                                                ],
+                                                                            ),
+                                                                            Function [
+                                                                                Unit ,
+                                                                                Tuple(2) [
+                                                                                    String ,
+                                                                                    String ,
+                                                                                ],
+                                                                            ],
+                                                                        ),
+                                                                        (
+                                                                            Symbol(
+                                                                                "s",
+                                                                            ),
+                                                                            String ,
+                                                                        ),
+                                                                    ],
+                                                                ),
+                                                                Tuple(3) [
+                                                                    String ,
+                                                                    String ,
+                                                                    String ,
+                                                                ],
+                                                            ),
+                                                            2,
+                                                        ),
+                                                        String ,
+                                                    ),
+                                                ),
+                                                (
+                                                    1,
+                                                    None,
+                                                    (
+                                                        StringLiteral(
+                                                            "Wasn\'t",
+                                                        ),
+                                                        String ,
+                                                    ),
+                                                ),
+                                            ],
+                                        ),
+                                        String ,
+                                    ),
+                                ),
+                                String ,
+                            ),
+                        ),
+                        Function [
+                            Unit ,
+                            String ,
+                        ],
+                    ),
+                    "main_slists": (
+                        Lambda(
+                            "_",
+                            (
+                                LetBinding(
+                                    "list",
+                                    (
+                                        Application(
+                                            (
+                                                VariantConstructor(
+                                                    UT:SList,
+                                                    0,
+                                                ),
+                                                Function [
+                                                    Tuple(2) [
+                                                        String ,
+                                                        UserType(UT:SList) ,
+                                                    ],
+                                                    UserType(UT:SList) ,
+                                                ],
+                                            ),
+                                            [
+                                                (
+                                                    Tuple(
+                                                        [
+                                                            (
+                                                                StringLiteral(
+                                                                    "mor",
+                                                                ),
+                                                                String ,
+                                                            ),
+                                                            (
+                                                                Application(
+                                                                    (
+                                                                        VariantConstructor(
+                                                                            UT:SList,
+                                                                            0,
+                                                                        ),
+                                                                        Function [
+                                                                            Tuple(2) [
+                                                                                String ,
+                                                                                UserType(UT:SList) ,
+                                                                            ],
+                                                                            UserType(UT:SList) ,
+                                                                        ],
+                                                                    ),
+                                                                    [
+                                                                        (
+                                                                            Tuple(
+                                                                                [
+                                                                                    (
+                                                                                        StringLiteral(
+                                                                                            "din",
+                                                                                        ),
+                                                                                        String ,
+                                                                                    ),
+                                                                                    (
+                                                                                        Application(
+                                                                                            (
+                                                                                                VariantConstructor(
+                                                                                                    UT:SList,
+                                                                                                    1,
+                                                                                                ),
+                                                                                                Function [
+                                                                                                    Unit ,
+                                                                                                    UserType(UT:SList) ,
+                                                                                                ],
+                                                                                            ),
+                                                                                            [
+                                                                                                (
+                                                                                                    Unit,
+                                                                                                    Unit ,
+                                                                                                ),
+                                                                                            ],
+                                                                                        ),
+                                                                                        UserType(UT:SList) ,
+                                                                                    ),
+                                                                                ],
+                                                                            ),
+                                                                            Tuple(2) [
+                                                                                String ,
+                                                                                UserType(UT:SList) ,
+                                                                            ],
+                                                                        ),
+                                                                    ],
+                                                                ),
+                                                                UserType(UT:SList) ,
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    Tuple(2) [
+                                                        String ,
+                                                        UserType(UT:SList) ,
+                                                    ],
+                                                ),
+                                            ],
+                                        ),
+                                        UserType(UT:SList) ,
+                                    ),
+                                    (
+                                        Symbol(
+                                            "list",
+                                        ),
+                                        UserType(UT:SList) ,
+                                    ),
+                                ),
+                                UserType(UT:SList) ,
+                            ),
+                        ),
+                        Function [
+                            Unit ,
+                            UserType(UT:SList) ,
+                        ],
+                    ),
+                    "apply_op": (
+                        Lambda(
+                            "op",
+                            (
+                                Lambda(
+                                    "a",
+                                    (
+                                        MatchSum(
+                                            (
+                                                Symbol(
+                                                    "op",
+                                                ),
+                                                UserType(UT:Op) ,
+                                            ),
+                                            [
+                                                (
+                                                    0,
+                                                    Some(
+                                                        "b",
+                                                    ),
+                                                    (
+                                                        BinaryOp(
+                                                            BinOpAdd,
+                                                            (
+                                                                Symbol(
+                                                                    "a",
+                                                                ),
+                                                                Int ,
+                                                            ),
+                                                            (
+                                                                Symbol(
+                                                                    "b",
+                                                                ),
+                                                                Int ,
+                                                            ),
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                ),
+                                                (
+                                                    1,
+                                                    Some(
+                                                        "b",
+                                                    ),
+                                                    (
+                                                        BinaryOp(
+                                                            BinOpSub,
+                                                            (
+                                                                Symbol(
+                                                                    "a",
+                                                                ),
+                                                                Int ,
+                                                            ),
+                                                            (
+                                                                Symbol(
+                                                                    "b",
+                                                                ),
+                                                                Int ,
+                                                            ),
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                ),
+                                            ],
+                                        ),
+                                        Int ,
+                                    ),
+                                ),
+                                Function [
+                                    Int ,
+                                    Int ,
+                                ],
+                            ),
+                        ),
+                        Function [
+                            UserType(UT:Op) ,
+                            Function [
+                                Int ,
+                                Int ,
+                            ],
+                        ],
+                    ),
+                    "String_split": (
+                        BuiltInFn(
+                            StringSplit,
+                        ),
+                        Function [
+                            Tuple(2) [
+                                String ,
+                                String ,
+                            ],
+                            Tuple(2) [
+                                String ,
+                                String ,
+                            ],
+                        ],
+                    ),
+                    "test_nums_ops": (
+                        Lambda(
+                            "_",
+                            (
+                                BinaryOp(
+                                    BinOpAdd,
+                                    (
+                                        BinaryOp(
+                                            BinOpAdd,
+                                            (
+                                                BinaryOp(
+                                                    BinOpMul,
+                                                    (
+                                                        BinaryOp(
+                                                            BinOpSub,
+                                                            (
+                                                                IntegerLiteral(
+                                                                    5,
+                                                                ),
+                                                                Int ,
+                                                            ),
+                                                            (
+                                                                IntegerLiteral(
+                                                                    2,
+                                                                ),
+                                                                Int ,
+                                                            ),
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                    (
+                                                        Application(
+                                                            (
+                                                                Symbol(
+                                                                    "double",
+                                                                ),
+                                                                Function [
+                                                                    Int ,
+                                                                    Int ,
+                                                                ],
+                                                            ),
+                                                            [
+                                                                (
+                                                                    IntegerLiteral(
+                                                                        7,
+                                                                    ),
+                                                                    Int ,
+                                                                ),
+                                                            ],
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                ),
+                                                Int ,
+                                            ),
+                                            (
+                                                BinaryOp(
+                                                    BinOpMul,
+                                                    (
+                                                        IntegerLiteral(
+                                                            3,
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                    (
+                                                        IntegerLiteral(
+                                                            7,
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                ),
+                                                Int ,
+                                            ),
+                                        ),
+                                        Int ,
+                                    ),
+                                    (
+                                        BinaryOp(
+                                            BinOpDiv,
+                                            (
+                                                IntegerLiteral(
+                                                    9,
+                                                ),
+                                                Int ,
+                                            ),
+                                            (
+                                                IntegerLiteral(
+                                                    2,
+                                                ),
+                                                Int ,
+                                            ),
+                                        ),
+                                        Int ,
+                                    ),
+                                ),
+                                Int ,
+                            ),
+                        ),
+                        Function [
+                            Unit ,
+                            Int ,
+                        ],
+                    ),
+                    "print": (
+                        BuiltInFn(
+                            Print,
+                        ),
+                        Function [
+                            String ,
+                            Unit ,
+                        ],
+                    ),
+                    "apply": (
+                        Lambda(
+                            "oplist",
+                            (
+                                Lambda(
+                                    "init",
+                                    (
+                                        MatchSum(
+                                            (
+                                                Symbol(
+                                                    "oplist",
+                                                ),
+                                                UserType(UT:OpList) ,
+                                            ),
+                                            [
+                                                (
+                                                    0,
+                                                    Some(
+                                                        "cons",
+                                                    ),
+                                                    (
+                                                        Application(
+                                                            (
+                                                                Symbol(
+                                                                    "apply",
+                                                                ),
+                                                                Function [
+                                                                    UserType(UT:OpList) ,
+                                                                    Function [
+                                                                        Int ,
+                                                                        Int ,
+                                                                    ],
+                                                                ],
+                                                            ),
+                                                            [
+                                                                (
+                                                                    FieldAccess(
+                                                                        (
+                                                                            Symbol(
+                                                                                "cons",
+                                                                            ),
+                                                                            Tuple(2) [
+                                                                                UserType(UT:Op) ,
+                                                                                UserType(UT:OpList) ,
+                                                                            ],
+                                                                        ),
+                                                                        1,
+                                                                    ),
+                                                                    UserType(UT:OpList) ,
+                                                                ),
+                                                                (
+                                                                    Application(
+                                                                        (
+                                                                            Symbol(
+                                                                                "apply_op",
+                                                                            ),
+                                                                            Function [
+                                                                                UserType(UT:Op) ,
+                                                                                Function [
+                                                                                    Int ,
+                                                                                    Int ,
+                                                                                ],
+                                                                            ],
+                                                                        ),
+                                                                        [
+                                                                            (
+                                                                                FieldAccess(
+                                                                                    (
+                                                                                        Symbol(
+                                                                                            "cons",
+                                                                                        ),
+                                                                                        Tuple(2) [
+                                                                                            UserType(UT:Op) ,
+                                                                                            UserType(UT:OpList) ,
+                                                                                        ],
+                                                                                    ),
+                                                                                    0,
+                                                                                ),
+                                                                                UserType(UT:Op) ,
+                                                                            ),
+                                                                            (
+                                                                                Symbol(
+                                                                                    "init",
+                                                                                ),
+                                                                                Int ,
+                                                                            ),
+                                                                        ],
+                                                                    ),
+                                                                    Int ,
+                                                                ),
+                                                            ],
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                ),
+                                                (
+                                                    1,
+                                                    None,
+                                                    (
+                                                        Symbol(
+                                                            "init",
+                                                        ),
+                                                        Int ,
+                                                    ),
+                                                ),
+                                            ],
+                                        ),
+                                        Int ,
+                                    ),
+                                ),
+                                Function [
+                                    Int ,
+                                    Int ,
+                                ],
+                            ),
+                        ),
+                        Function [
+                            UserType(UT:OpList) ,
+                            Function [
+                                Int ,
+                                Int ,
+                            ],
+                        ],
+                    ),
+                },
+                type_constructors: {
+                    "SList": UserType(
+                        UT:SList,
+                    ),
+                    "Expr_p_Parsed": UserType(
+                        UT:Expr_p_Parsed,
+                    ),
+                    "TypeKind": UserType(
+                        UT:TypeKind,
+                    ),
+                    "SOption": UserType(
+                        UT:SOption,
+                    ),
+                    "Op": UserType(
+                        UT:Op,
+                    ),
+                    "OpList": UserType(
+                        UT:OpList,
+                    ),
+                    "List": UserType(
+                        UT:List,
+                    ),
+                    "Expr_p_TypeChecked": UserType(
+                        UT:Expr_p_TypeChecked,
+                    ),
+                },
+            },
+            scopes: {
+                "SList": Scope {
+                    bindings: {
+                        "Cons": (
+                            VariantConstructor(
+                                UT:SList,
+                                0,
+                            ),
+                            Function [
+                                Tuple(2) [
+                                    String ,
+                                    UserType(UT:SList) ,
+                                ],
+                                UserType(UT:SList) ,
+                            ],
+                        ),
+                        "End": (
+                            VariantConstructor(
+                                UT:SList,
+                                1,
+                            ),
+                            Function [
+                                Unit ,
+                                UserType(UT:SList) ,
+                            ],
+                        ),
+                    },
+                    type_constructors: {},
+                },
+                "Expr_p_Parsed.FuncCall": Scope {
+                    bindings: {},
+                    type_constructors: {
+                        "Expr_p_Parsed.FuncCall": UserType(
+                            UT:Expr_p_Parsed.FuncCall,
+                        ),
+                    },
+                },
+                "TypeKind": Scope {
+                    bindings: {
+                        "TypeRef": (
+                            VariantConstructor(
+                                UT:TypeKind,
+                                2,
+                            ),
+                            Function [
+                                String ,
+                                UserType(UT:TypeKind) ,
+                            ],
+                        ),
+                        "I32": (
+                            VariantConstructor(
+                                UT:TypeKind,
+                                0,
+                            ),
+                            Function [
+                                Unit ,
+                                UserType(UT:TypeKind) ,
+                            ],
+                        ),
+                        "F32": (
+                            VariantConstructor(
+                                UT:TypeKind,
+                                1,
+                            ),
+                            Function [
+                                Unit ,
+                                UserType(UT:TypeKind) ,
+                            ],
+                        ),
+                    },
+                    type_constructors: {},
+                },
+                "Expr_p_TypeChecked.FuncCall": Scope {
+                    bindings: {},
+                    type_constructors: {
+                        "Expr_p_TypeChecked.FuncCall": UserType(
+                            UT:Expr_p_TypeChecked.FuncCall,
+                        ),
+                    },
+                },
+                "Op": Scope {
+                    bindings: {
+                        "Sub": (
+                            VariantConstructor(
+                                UT:Op,
+                                1,
+                            ),
+                            Function [
+                                Int ,
+                                UserType(UT:Op) ,
+                            ],
+                        ),
+                        "Add": (
+                            VariantConstructor(
+                                UT:Op,
+                                0,
+                            ),
+                            Function [
+                                Int ,
+                                UserType(UT:Op) ,
+                            ],
+                        ),
+                    },
+                    type_constructors: {},
+                },
+                "SOption": Scope {
+                    bindings: {
+                        "None": (
+                            VariantConstructor(
+                                UT:SOption,
+                                1,
+                            ),
+                            Function [
+                                Unit ,
+                                UserType(UT:SOption) ,
+                            ],
+                        ),
+                        "Some": (
+                            VariantConstructor(
+                                UT:SOption,
+                                0,
+                            ),
+                            Function [
+                                String ,
+                                UserType(UT:SOption) ,
+                            ],
+                        ),
+                    },
+                    type_constructors: {},
+                },
+                "OpList": Scope {
+                    bindings: {
+                        "Nil": (
+                            VariantConstructor(
+                                UT:OpList,
+                                1,
+                            ),
+                            Function [
+                                Unit ,
+                                UserType(UT:OpList) ,
+                            ],
+                        ),
+                        "Cons": (
+                            VariantConstructor(
+                                UT:OpList,
+                                0,
+                            ),
+                            Function [
+                                Tuple(2) [
+                                    UserType(UT:Op) ,
+                                    UserType(UT:OpList) ,
+                                ],
+                                UserType(UT:OpList) ,
+                            ],
+                        ),
+                    },
+                    type_constructors: {},
+                },
+                "List": Scope {
+                    bindings: {
+                        "Nil": (
+                            VariantConstructor(
+                                UT:List,
+                                1,
+                            ),
+                            Function [
+                                Unit ,
+                                UserType(UT:List) [
+                                    '0,
+                                ],
+                            ],
+                        ),
+                        "Cons": (
+                            VariantConstructor(
+                                UT:List,
+                                0,
+                            ),
+                            Function [
+                                Tuple(2) [
+                                    '0,
+                                    UserType(UT:List) [
+                                        '0,
+                                    ],
+                                ],
+                                UserType(UT:List) [
+                                    '0,
+                                ],
+                            ],
+                        ),
+                    },
+                    type_constructors: {},
+                },
+            },
+            types: [
+                Sum {
+                    qualified_name: "TypeKind",
+                    type_parameters: [],
+                    variants: [
+                        (
+                            "I32",
+                            Unit ,
+                        ),
+                        (
+                            "F32",
+                            Unit ,
+                        ),
+                        (
+                            "TypeRef",
+                            String ,
+                        ),
+                    ],
+                },
+                ClosedTypeClassInstance {
+                    qualified_name: "Expr_p_Parsed",
+                    methods: [],
+                    impls: [],
+                    members: [
+                        UT:Expr_p_Parsed.FuncCall,
+                    ],
+                },
+                Record {
+                    qualified_name: "Expr_p_Parsed.FuncCall",
+                    type_parameters: [],
+                    fields: [
+                        (
+                            "ident",
+                            String ,
+                        ),
+                        (
+                            "params",
+                            String ,
+                        ),
+                    ],
+                },
+                ClosedTypeClassInstance {
+                    qualified_name: "Expr_p_TypeChecked",
+                    methods: [],
+                    impls: [],
+                    members: [
+                        UT:Expr_p_TypeChecked.FuncCall,
+                    ],
+                },
+                Record {
+                    qualified_name: "Expr_p_TypeChecked.FuncCall",
+                    type_parameters: [],
+                    fields: [
+                        (
+                            "ident",
+                            String ,
+                        ),
+                        (
+                            "params",
+                            String ,
+                        ),
+                        (
+                            "retType",
+                            UserType(UT:TypeKind) ,
+                        ),
+                    ],
+                },
+                Sum {
+                    qualified_name: "SOption",
+                    type_parameters: [],
+                    variants: [
+                        (
+                            "Some",
+                            String ,
+                        ),
+                        (
+                            "None",
+                            Unit ,
+                        ),
+                    ],
+                },
+                Sum {
+                    qualified_name: "SList",
+                    type_parameters: [],
+                    variants: [
+                        (
+                            "Cons",
+                            Tuple(2) [
+                                String ,
+                                UserType(UT:SList) ,
+                            ],
+                        ),
+                        (
+                            "End",
+                            Unit ,
+                        ),
+                    ],
+                },
+                Sum {
+                    qualified_name: "Op",
+                    type_parameters: [],
+                    variants: [
+                        (
+                            "Add",
+                            Int ,
+                        ),
+                        (
+                            "Sub",
+                            Int ,
+                        ),
+                    ],
+                },
+                Sum {
+                    qualified_name: "OpList",
+                    type_parameters: [],
+                    variants: [
+                        (
+                            "Cons",
+                            Tuple(2) [
+                                UserType(UT:Op) ,
+                                UserType(UT:OpList) ,
+                            ],
+                        ),
+                        (
+                            "Nil",
+                            Unit ,
+                        ),
+                    ],
+                },
+                Sum {
+                    qualified_name: "List",
+                    type_parameters: [
+                        "a",
+                    ],
+                    variants: [
+                        (
+                            "Cons",
+                            Tuple(2) [
+                                '0,
+                                UserType(UT:List) [
+                                    '0,
+                                ],
+                            ],
+                        ),
+                        (
+                            "Nil",
+                            Unit ,
+                        ),
+                    ],
+                },
+            ],
+        },
+    },
+}

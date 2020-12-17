@@ -161,7 +161,7 @@ impl Interpreter {
                         }
                     }
 
-                    panic!()
+                    panic!("{:?}, {:?}", arms, vi)
                 } else {
                     panic!()
                 }
@@ -218,31 +218,30 @@ impl Interpreter {
                 }
             }
             ExprT::Symbol(s) => {
-                let b = self
-                    .program
-                    .environment
-                    .borrow()
-                    .root_scope
-                    .bindings
-                    .get(s)
-                    .cloned();
-                if let Some(b) = b {
-                    if let (ExprT::Lambda(p, body), _) = b {
-                        self.push_val(Value::Function(
-                            Rc::new(p.clone()),
-                            vec![],
-                            body.as_ref() as *const TypedExpr,
-                        ));
-                    } else if let (ExprT::BuiltInFn(f), _) = b {
-                        self.push_val(Value::BuiltInFn(f));
+                let val = {
+                    let env = self.program.environment.borrow();
+
+                    let b = env.root_scope.bindings.get(s);
+
+                    if let Some(b) = b {
+                        if let (ExprT::Lambda(p, body), _) = b {
+                            Value::Function(
+                                Rc::new(p.clone()),
+                                vec![],
+                                body.as_ref() as *const TypedExpr,
+                            )
+                        } else if let (ExprT::BuiltInFn(f), _) = b {
+                            Value::BuiltInFn(*f)
+                        } else {
+                            panic!()
+                        }
+                    } else if let Some(b) = self.bindings.get(s).cloned() {
+                        b
                     } else {
-                        panic!()
+                        panic!("{:?}", s)
                     }
-                } else if let Some(b) = self.bindings.get(s).cloned() {
-                    self.push_val(b);
-                } else {
-                    panic!("{:?}", s)
-                }
+                };
+                self.push_val(val);
             }
             ExprT::Record(fields) => {
                 let mut r = Vec::new();
@@ -291,9 +290,6 @@ impl Interpreter {
                 self.push_val(Value::String(Rc::new(s.clone())));
             }
             ExprT::IntegerLiteral(i) => self.push_val(Value::Integer(*i)),
-            ExprT::ListConstructor() => {
-                self.push_val(Value::Tuple(vec![]));
-            }
             ExprT::VariantConstructor(th, vi) => {
                 let t = self.program.environment.borrow().types[th.index].clone();
                 if let TypeDefinition::Sum { variants, .. } = t {
@@ -304,6 +300,9 @@ impl Interpreter {
                 } else {
                     panic!()
                 }
+            }
+            ExprT::BuiltInFn(f) => {
+                self.push_val(Value::BuiltInFn(f.clone()));
             }
             ExprT::FieldAccess(lhs, i) => {
                 self.eval_expr(lhs);

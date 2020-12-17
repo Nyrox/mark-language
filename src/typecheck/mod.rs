@@ -411,6 +411,47 @@ fn infer_application(
         .map(|(lhs, (exprs, rt))| (ExprT::Application(box lhs, exprs), rt.clone()))
 }
 
+fn bump_generic_counters(expr: TypedExpr) -> TypedExpr {
+    let bump = TYPE_GLOBAL_COUNTER.load(Ordering::SeqCst);
+
+    fn bump_in_type(t: &mut Type, v: u32) -> u32 {
+        match t {
+            Type::TypeVariable(u) => {
+                *u += v;
+                *u
+            }
+            Type::ConstructedType(_, tys) => tys
+                .iter_mut()
+                .map(|t| bump_in_type(t, v))
+                .fold(0, |acc, a| acc.max(a)),
+            Type::ErrType => (0),
+        }
+    }
+
+    fn impl_rec((e, mut t): TypedExpr, bump: u32) -> (TypedExpr, u32) {
+        use ExprT::*;
+
+        match e {
+            Symbol(_)
+            | VariantConstructor(_, _)
+            | StringLiteral(_)
+            | IntegerLiteral(_)
+            | BooleanLiteral(_)
+            | BuiltInFn(_)
+            | Unit => {
+                let u = bump_in_type(&mut t, bump);
+                ((e, t), u)
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    let (r, u) = impl_rec(expr, bump);
+
+    TYPE_GLOBAL_COUNTER.fetch_add(u, Ordering::SeqCst);
+    return r;
+}
+
 fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> TypeJudgement<TypedExpr> {
     match expr {
         Expr::Conditional(cond, cons, alt) => check_type(ctx, cond, &Type::BOOL)
@@ -521,7 +562,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> TypeJudgem
                 }
             } else if let Some(b) = ctx.environment.borrow().root_scope.bindings.get(&s.0) {
                 TypeJudgement::Typed {
-                    inner: b.clone(),
+                    inner: bump_generic_counters(b.clone()),
                     constraints: Vec::new(),
                 }
             } else {
@@ -642,7 +683,14 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> TypeJudgem
     }
 }
 
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::Ordering;
+static TYPE_LOCAL_COUNTER: AtomicU32 = AtomicU32::new(0);
+static TYPE_GLOBAL_COUNTER: AtomicU32 = AtomicU32::new(0);
+
 fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> Type {
+    TYPE_LOCAL_COUNTER.store(0, Ordering::Relaxed);
+
     match ty {
         Ty::Tuple(tys) => Type::tuple(tys.iter().map(|t| resolve_type(ctx, t)).collect()),
         Ty::Func(a, b) => Type::function(resolve_type(ctx, &a), resolve_type(ctx, &b)),
@@ -675,7 +723,9 @@ fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> Type {
         Ty::Float => Type::FLOAT,
         Ty::String => Type::STRING,
         Ty::Bool => Type::BOOL,
-        Ty::TypeVariable(p) => Type::TypeVariable(p.0.clone()),
+        Ty::TypeVariable(p) => {
+            Type::TypeVariable(TYPE_LOCAL_COUNTER.fetch_add(1, Ordering::Relaxed))
+        }
         Ty::ConstructedType(n, p) => {
             let t = {
                 let env = ctx.environment.borrow();
@@ -733,7 +783,8 @@ fn typecheck_type_decl(ctx: &mut TypecheckingContext, decl: untyped::TypeDeclara
                                         th.clone(),
                                         decl.type_parameters
                                             .iter()
-                                            .map(|s| Type::TypeVariable(s.0.clone()))
+                                            .enumerate()
+                                            .map(|(i, s)| Type::TypeVariable(i as u32))
                                             .collect(),
                                     ),
                                 ),
