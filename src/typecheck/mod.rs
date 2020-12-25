@@ -221,8 +221,12 @@ fn check_type(
                 )),
             }
         }
+        Expr::Application(lhs, exprs) => infer_application(ctx, (lhs, exprs))
+            .then(|(e, t)| unify_types(expr.span(), t.clone(), ty.clone()))
+            .map(|((e, _), t2)| (e, t2)),
         Expr::Lambda(p, e) => match tc {
             TypeConstructor::Function if ty_params.len() == 2 => {
+                dbg!(&ty_params);
                 let (a, b) = (&ty_params[0], &ty_params[1]);
 
                 ctx.symbols.insert(p.0.clone(), a.clone());
@@ -332,25 +336,48 @@ fn check_type(
         _ => {
             let ((e, t), mut constraints) = infer_type(ctx, expr)?;
 
-            if &t == ty {
-                TypeJudgement::Typed {
-                    inner: (e, t),
-                    constraints,
-                }
-            } else if let Type::TypeVariable(p) = t {
-                constraints.push(Constraint::TypeParameterIsType(p, ty.clone()));
-                TypeJudgement::Typed {
-                    inner: (e, ty.clone()),
-                    constraints,
-                }
-            } else {
-                TypeJudgement::Error(TypeCheckingError::TypeMismatch(
-                    expr.span(),
-                    ty.clone(),
-                    Some(t),
-                ))
-            }
+            unify_types(expr.span(), ty.clone(), t).map(|t| (e, t))
         }
+    }
+}
+
+fn unify_types(span: Span, a: Type, b: Type) -> TypeJudgement<Type> {
+    match (a, b) {
+        (Type::ConstructedType(ref c1, ref p1), Type::ConstructedType(ref c2, ref p2)) => {
+            assert_eq!(p1.len(), p2.len());
+
+            TypeJudgement::Typed {
+                inner: (),
+                constraints: vec![],
+            }
+            .map_with_fail(|_| {
+                if c1 == c2 {
+                    Ok(c1)
+                } else {
+                    Err(TypeCheckingError::TypeMismatch(
+                        span,
+                        Type::ConstructedType(c1.clone(), p1.clone()),
+                        Some(Type::ConstructedType(c2.clone(), p2.clone())),
+                    ))
+                }
+            })
+            .and_still(|| {
+                p1.into_iter()
+                    .zip(p2.into_iter())
+                    .map(|(t1, t2)| unify_types(span, t1.clone(), t2.clone()))
+                    .collect::<TypeJudgement<Vec<_>>>()
+            })
+            .map(|(_, params)| Type::ConstructedType(c1.clone(), params))
+        }
+        (Type::TypeVariable(t1), t2) | (t2, Type::TypeVariable(t1)) => TypeJudgement::Typed {
+            inner: t2.clone(),
+            constraints: vec![Constraint::TypeParameterIsType(t1, t2)],
+        },
+        (a, b) if a == b => TypeJudgement::Typed {
+            inner: a,
+            constraints: vec![],
+        },
+        (a, b) => TypeCheckingError::TypeMismatch(span, a, Some(b)).as_judgement(),
     }
 }
 
@@ -358,6 +385,8 @@ fn infer_application(
     ctx: &mut TypecheckingContext,
     (lhs, exprs): (&Expr, &Vec<Expr>),
 ) -> TypeJudgement<TypedExpr> {
+    let lspan = lhs.span();
+
     infer_type(ctx, lhs)
         .then(|(e, t)| {
             let ((tc, ty_params), _) = match t {
@@ -405,8 +434,8 @@ fn infer_application(
                 .map(|a| (a, rt.clone()))
         })
         .map_with_constraints(|(lhs, (exprs, rt)), constraints| {
-            dbg!(constraints);
-            ((lhs, (exprs, rt)), vec![])
+            dbg!(lspan, &constraints);
+            ((lhs, (exprs, rt)), constraints)
         })
         .map(|(lhs, (exprs, rt))| (ExprT::Application(box lhs, exprs), rt.clone()))
 }
@@ -417,8 +446,9 @@ fn bump_generic_counters(expr: TypedExpr) -> TypedExpr {
     fn bump_in_type(t: &mut Type, v: u32) -> u32 {
         match t {
             Type::TypeVariable(u) => {
+                let o = *u;
                 *u += v;
-                *u
+                o
             }
             Type::ConstructedType(_, tys) => tys
                 .iter_mut()
@@ -448,7 +478,7 @@ fn bump_generic_counters(expr: TypedExpr) -> TypedExpr {
 
     let (r, u) = impl_rec(expr, bump);
 
-    TYPE_GLOBAL_COUNTER.fetch_add(u, Ordering::SeqCst);
+    TYPE_GLOBAL_COUNTER.store(u.max(bump), Ordering::SeqCst);
     return r;
 }
 
@@ -562,7 +592,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> TypeJudgem
                 }
             } else if let Some(b) = ctx.environment.borrow().root_scope.bindings.get(&s.0) {
                 TypeJudgement::Typed {
-                    inner: bump_generic_counters(b.clone()),
+                    inner: dbg!(bump_generic_counters(dbg!(b.clone()))),
                     constraints: Vec::new(),
                 }
             } else {
@@ -570,20 +600,25 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> TypeJudgem
             }
         }
         Expr::Lambda(p, e) => {
-            if &p.0 == "()" {
+            let st = if &p.0 == "()" {
                 ctx.symbols.insert(p.0.clone(), Type::UNIT);
-            }
+                Type::UNIT
+            } else {
+                let t = Type::TypeVariable(TYPE_GLOBAL_COUNTER.fetch_add(1, Ordering::SeqCst));
+                ctx.symbols.insert(p.0.clone(), t.clone());
+                t
+            };
 
             let r = infer_type(ctx, e);
 
             ctx.symbols.remove(&p.0);
-            let (r, _) = r?;
+            let (r, c) = r?;
             let e = ExprT::Lambda(p.0.clone(), box (r.0, r.1.clone()));
-            let t = Type::function(Type::UNIT, r.1);
+            let t = Type::function(st, r.1);
 
             TypeJudgement::Typed {
                 inner: (e, t),
-                constraints: Vec::new(),
+                constraints: c,
             }
         }
         Expr::Application(lhs, rhs) => infer_application(ctx, (lhs.as_ref(), &rhs)),
@@ -592,7 +627,7 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> TypeJudgem
             if let Expr::Symbol(s) = &**e {
                 if let Some(scope) = ctx.environment.borrow().scopes.get(&s.0) {
                     if let Some(binding) = scope.bindings.get(&f.0) {
-                        return TypeJudgement::new(binding.clone());
+                        return TypeJudgement::new(bump_generic_counters(binding.clone()));
                     } else {
                         return TypeCheckingError::GenericError(
                             format!("Symbol {} does not exist in scope {}", f.0, s.0),
@@ -689,60 +724,68 @@ static TYPE_LOCAL_COUNTER: AtomicU32 = AtomicU32::new(0);
 static TYPE_GLOBAL_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 fn resolve_type(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> Type {
-    TYPE_LOCAL_COUNTER.store(0, Ordering::Relaxed);
+    fn resolve_type_inner(ctx: &mut TypecheckingContext, ty: &untyped::Ty) -> Type {
+        match ty {
+            Ty::Tuple(tys) => Type::tuple(tys.iter().map(|t| resolve_type_inner(ctx, t)).collect()),
+            Ty::Func(a, b) => {
+                Type::function(resolve_type_inner(ctx, &a), resolve_type_inner(ctx, &b))
+            }
+            Ty::TypeRef(n, p) => {
+                let typename = match p {
+                    None => n.0.clone(),
+                    Some(ref p) => format!("{}_p_{}", &n.0, &p.0),
+                };
 
-    match ty {
-        Ty::Tuple(tys) => Type::tuple(tys.iter().map(|t| resolve_type(ctx, t)).collect()),
-        Ty::Func(a, b) => Type::function(resolve_type(ctx, &a), resolve_type(ctx, &b)),
-        Ty::TypeRef(n, p) => {
-            let typename = match p {
-                None => n.0.clone(),
-                Some(ref p) => format!("{}_p_{}", &n.0, &p.0),
-            };
-
-            if let Some(t) = ctx
-                .environment
-                .borrow()
-                .root_scope
-                .type_constructors
-                .get(&typename)
-            {
-                match t.arity() {
-                    0 => Type::ConstructedType(t.clone(), vec![]),
-                    _ => {
-                        eprintln!("Not enough arguments to type constructor {:?}", t);
-                        Type::ErrType
+                if let Some(t) = ctx
+                    .environment
+                    .borrow()
+                    .root_scope
+                    .type_constructors
+                    .get(&typename)
+                {
+                    match t.arity() {
+                        0 => Type::ConstructedType(t.clone(), vec![]),
+                        _ => {
+                            eprintln!("Not enough arguments to type constructor {:?}", t);
+                            Type::ErrType
+                        }
                     }
+                } else {
+                    return Type::ErrType;
                 }
-            } else {
-                return Type::ErrType;
             }
-        }
-        Ty::Unit => Type::UNIT,
-        Ty::Int => Type::INT,
-        Ty::Float => Type::FLOAT,
-        Ty::String => Type::STRING,
-        Ty::Bool => Type::BOOL,
-        Ty::TypeVariable(p) => {
-            Type::TypeVariable(TYPE_LOCAL_COUNTER.fetch_add(1, Ordering::Relaxed))
-        }
-        Ty::ConstructedType(n, p) => {
-            let t = {
-                let env = ctx.environment.borrow();
-                env.root_scope.type_constructors.get(&n.0).cloned()
-            };
+            Ty::Unit => Type::UNIT,
+            Ty::Int => Type::INT,
+            Ty::Float => Type::FLOAT,
+            Ty::String => Type::STRING,
+            Ty::Bool => Type::BOOL,
+            Ty::TypeVariable(p) => {
+                Type::TypeVariable(TYPE_LOCAL_COUNTER.fetch_add(1, Ordering::SeqCst))
+            }
+            Ty::ConstructedType(n, p) => {
+                let t = {
+                    let env = ctx.environment.borrow();
+                    env.root_scope.type_constructors.get(&n.0).cloned()
+                };
 
-            if let Some(t) = t {
-                Type::ConstructedType(t.clone(), p.iter().map(|t| resolve_type(ctx, t)).collect())
-            } else {
-                panic!("{:?} not found", n)
+                if let Some(t) = t {
+                    Type::ConstructedType(
+                        t.clone(),
+                        p.iter().map(|t| resolve_type_inner(ctx, t)).collect(),
+                    )
+                } else {
+                    panic!("{:?} not found", n)
+                }
             }
-        }
-        _ => {
-            eprintln!("Error while trying to resolve type: {:?}", ty);
-            Type::ErrType
+            _ => {
+                eprintln!("Error while trying to resolve type: {:?}", ty);
+                Type::ErrType
+            }
         }
     }
+
+    TYPE_LOCAL_COUNTER.store(0, Ordering::SeqCst);
+    resolve_type_inner(ctx, ty)
 }
 
 fn typecheck_type_decl(ctx: &mut TypecheckingContext, decl: untyped::TypeDeclaration) {
@@ -927,6 +970,10 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
                         .insert(ident.0.clone(), expected.clone());
 
                     check_type(&mut checking_context, &expr, &expected)
+                        .map_with_constraints(|i, c| {
+                            dbg!(&ident, &c);
+                            (i, c)
+                        })
                         .map(|(e, t)| {
                             checking_context
                                 .environment
@@ -939,6 +986,10 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
                         .iter_err(|err| errors.push(err.clone()));
                 } else {
                     infer_type(&mut checking_context, &expr)
+                        .map_with_constraints(|i, c| {
+                            dbg!(&ident, &c);
+                            (i, c)
+                        })
                         .map(|(e, t)| {
                             checking_context
                                 .environment

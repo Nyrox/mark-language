@@ -107,7 +107,8 @@ map f list =
 
 main () =
 	let someList = List.Cons ("yo", List.Cons (5, List.Nil ()))
-	map (\x -> print x) someList
+	map (\x -> printi x) someList
+
 
 
 
