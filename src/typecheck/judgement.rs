@@ -1,5 +1,5 @@
 use super::TypeCheckingError;
-use crate::ast::typed::Constraint;
+use crate::ast::typed::{Constraint, TypedExpr};
 
 use std::iter::FromIterator;
 use std::ops::Try;
@@ -188,5 +188,14 @@ impl<T> Try for TypeJudgement<T> {
 
     fn from_error(err: TypeCheckingError) -> Self {
         TypeJudgement::Error(err)
+    }
+}
+
+
+impl TypeJudgement<TypedExpr> {
+    fn solve_constraints(self) -> TypeJudgement<(TypedExpr, TypeSet)> {
+        let typeset = super::constraints::solve(self.constraints);
+        let expr = super::constraints::apply_typeset(self.inner);
+        (expr, typeset)
     }
 }

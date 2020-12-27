@@ -192,10 +192,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum Constraint {
-    TypeParameterIsType(u32, Type),
-}
+
 
 #[derive(Debug, Clone, Copy)]
 pub enum BuiltInFn {

@@ -14,6 +14,8 @@ use std::{collections::HashMap, rc::Rc};
 pub mod judgement;
 use judgement::*;
 
+pub mod constraints;
+
 #[derive(Debug, Clone)]
 pub enum TypeCheckingError {
     UnknownType(Spanned<String>),
