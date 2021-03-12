@@ -1,4 +1,18 @@
-Experimenting with advanced type systems, featuring Closed type classes, i.e. type classes whose members are known at declaration time to allow for exhaustive pattern matching.
+# Experimental ML Dialect
+
+A small ML dialect to test ideas. Experimenting with advanced type systems, featuring Closed type classes, i.e. type classes whose members are known at declaration time to allow for exhaustive pattern matching.
+
+Check the examples/ folder for some real code.
+
+Features:
+- [x] Bi-Directional Type Checker allowing for large scale inference just from top-level annotation
+- [x] Closed Type Classes
+- [x] Variant Polymorphism, allowing closed type classes to declare multiple variants and conditionally compile types and methods based on those variants
+- [x] Functions as first-class objects
+- [x] Partial Function Application and Currying
+- [x] Full algebraic data types, including pattern matching on union types
+- [x] Simple and mutual function recursion
+- [x] Recursive data types
 
 Planned:
 
@@ -10,15 +24,7 @@ Maybe Planned:
 - [ ] Generic Functors aka. Module Generics á la Ocaml
 - [ ] Refinement Types
 
-Implemented:
-- [x] Bi-Directional Type Checker allowing for large scale inference just from top-level annotation
-- [x] Closed Type Classes
-- [x] Variant Polymorphism, allowing closed type classes to declare multiple variants and conditionally compile types and methods based on those variants
-- [x] Functions as first-class objects
-- [x] Partial Function Application and Currying
-- [x] Full algebraic data types, including pattern matching on union types
-- [x] Simple and mutual function recursion
-- [x] Recursive data types
+
 
 
 Current progress: This program **runs**
