@@ -1,4 +1,4 @@
-# Experimental ML Dialect
+# Mark's ML Dialect, ML for short.
 
 A small ML dialect to test ideas. Experimenting with advanced type systems, featuring Closed type classes, i.e. type classes whose members are known at declaration time to allow for exhaustive pattern matching.
 
