@@ -1,6 +1,7 @@
 #![feature(box_syntax)]
 #![feature(let_chains)]
 #![feature(iterator_fold_self)]
+#![feature(try_trait)]
 
 pub mod parser;
 
@@ -12,9 +13,10 @@ pub mod interpret;
 pub mod typecheck;
 
 fn main() {
-    let file = std::fs::read_to_string("examples/aoc2020/day3/main.ml").unwrap();
+    // let file = std::fs::read_to_string("examples/aoc2020/day3/main.ml").unwrap();
+    // std::env::set_current_dir("examples/aoc2020/day3").unwrap();
 
-    std::env::set_current_dir("examples/aoc2020/day3").unwrap();
+    let file = std::fs::read_to_string("basic.ml").unwrap();
 
     let thread = std::thread::Builder::new().stack_size(32 * 1024 * 1024);
 
@@ -24,7 +26,7 @@ fn main() {
 
             let ast = parser::Parser::new(&tokens).parse().unwrap();
 
-            // dbg!(&ast);
+            std::fs::write("ast.ron", format!("{:#?}", &ast)).ok();
 
             let typechecked = match typecheck::typecheck(ast) {
                 Ok(t) => t,
@@ -33,6 +35,8 @@ fn main() {
                     return;
                 }
             };
+
+            std::fs::write("typed_ast.ron", format!("{:#?}", &typechecked)).ok();
 
             interpret::interpret(typechecked);
         })

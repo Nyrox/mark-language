@@ -6,11 +6,13 @@ use super::untyped;
 pub enum TypeDefinition {
     Record {
         qualified_name: Rc<String>,
-        fields: Vec<(String, ResolvedType)>,
+        type_parameters: Vec<String>,
+        fields: Vec<(String, Type)>,
     },
     Sum {
         qualified_name: Rc<String>,
-        variants: Vec<(String, ResolvedType)>,
+        type_parameters: Vec<String>,
+        variants: Vec<(String, Type)>,
     },
     ClosedTypeClassInstance {
         qualified_name: Rc<String>,
@@ -30,36 +32,47 @@ impl TypeDefinition {
             }
         }
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct TypeEnvironment {
-    pub types: Vec<TypeDefinition>,
-    pub type_aliases: HashMap<String, ResolvedType>,
-}
+    pub fn generic_arity(&self) -> usize {
+        use TypeDefinition::*;
 
-impl TypeEnvironment {
-    pub fn new() -> Self {
-        Self {
-            types: Vec::new(),
-            type_aliases: HashMap::new(),
+        match self {
+            Record {
+                type_parameters, ..
+            } => type_parameters.len(),
+            Sum {
+                type_parameters, ..
+            } => type_parameters.len(),
+            ClosedTypeClassInstance { .. } => 0,
         }
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct TypeEnvironment {
+    pub root_scope: Scope,
+    pub scopes: HashMap<String, Scope>,
+    pub types: Vec<TypeDefinition>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Scope {
+    pub bindings: HashMap<String, TypedExpr>,
+    pub type_constructors: HashMap<String, TypeConstructor>,
+}
+
 #[derive(Clone)]
 pub struct TypeHandle {
-    pub qualified_name: Rc<String>,
     pub index: usize,
     pub environment: Rc<RefCell<TypeEnvironment>>,
 }
 
 impl Debug for TypeHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TypeHandle")
-            .field("qualified_name", &self.qualified_name)
-            .field("index", &self.index)
-            .finish()
+        f.write_fmt(format_args!(
+            "UT:{}",
+            self.environment.borrow().types[self.index].qualified_name()
+        ))
     }
 }
 
@@ -69,10 +82,12 @@ impl PartialEq for TypeHandle {
     }
 }
 
+impl Eq for TypeHandle {}
+
 #[derive(Debug, Clone)]
 pub struct NamedFuncSig {
     pub ident: String,
-    pub sig: (ResolvedType, ResolvedType),
+    pub sig: (Type, Type),
 }
 
 #[derive(Debug, Clone)]
@@ -82,18 +97,99 @@ pub struct TypeClassImplItem {
     pub body: untyped::Expr,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ResolvedType {
-    TypeHandle(TypeHandle),
-    Function(Box<ResolvedType>, Box<ResolvedType>),
-    Tuple(Vec<ResolvedType>),
-    List(Box<ResolvedType>),
-    Unit,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypeConstructor {
+    Tuple(usize),
+    UserType(TypeHandle),
+    Function,
     Int,
     Float,
     String,
     Bool,
-    ErrType, // indicates that type checking previously failed
+    Unit,
+}
+
+impl TypeConstructor {
+    pub fn arity(&self) -> usize {
+        use TypeConstructor::*;
+
+        match self {
+            Tuple(n) => *n,
+            UserType(th) => th.environment.borrow().types[th.index].generic_arity(),
+            Function => 2,
+            Int | Float | String | Bool | Unit => 0,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub enum Type {
+    TypeVariable(u32),
+    ConstructedType(TypeConstructor, Vec<Type>),
+    ErrType, // indicates that type checking failed
+}
+
+impl Debug for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::ErrType => f.write_str("ErrType"),
+            Type::TypeVariable(s) => f.write_fmt(format_args!("'{}", s)),
+            Type::ConstructedType(tc, tys) => {
+                f.write_fmt(format_args!("{:?} ", tc))?;
+                if tys.len() != 0 {
+                    f.debug_list().entries(tys.iter()).finish()
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+}
+
+impl Type {
+    pub const INT: Type = Self::primitive(TypeConstructor::Int);
+    pub const FLOAT: Type = Self::primitive(TypeConstructor::Float);
+    pub const STRING: Type = Self::primitive(TypeConstructor::String);
+    pub const BOOL: Type = Self::primitive(TypeConstructor::Bool);
+    pub const UNIT: Type = Self::primitive(TypeConstructor::Unit);
+
+    pub const fn primitive(tc: TypeConstructor) -> Type {
+        Type::ConstructedType(tc, vec![])
+    }
+
+    pub fn function(a: Type, b: Type) -> Type {
+        Type::ConstructedType(TypeConstructor::Function, vec![a, b])
+    }
+
+    pub fn tuple(tys: Vec<Type>) -> Type {
+        Type::ConstructedType(TypeConstructor::Tuple(tys.len()), tys)
+    }
+
+    pub fn user_type(th: TypeHandle, params: Vec<Type>) -> Type {
+        Type::ConstructedType(TypeConstructor::UserType(th), params)
+    }
+
+    pub fn type_constructor(&self) -> Option<&TypeConstructor> {
+        match self {
+            Type::ConstructedType(ref tc, _) => Some(tc),
+            _ => None,
+        }
+    }
+}
+
+impl Type {
+    pub fn is_generic(&self) -> bool {
+        use Type::*;
+
+        match self {
+            TypeVariable(_) => true,
+            ConstructedType(_, tys) => tys
+                .iter()
+                .map(Self::is_generic)
+                .fold(false, |acc, a| acc || a),
+            ErrType => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -107,46 +203,43 @@ pub enum BuiltInFn {
 }
 
 impl BuiltInFn {
-    pub fn resolved_type(&self) -> ResolvedType {
+    pub fn resolved_type(&self) -> Type {
         use BuiltInFn::*;
-        use ResolvedType::*;
 
         match self {
-            FileRead => Function(box ResolvedType::String, box ResolvedType::String),
-            StringSplit => Function(
-                box Tuple(vec![ResolvedType::String, ResolvedType::String]),
-                box ResolvedType::Tuple(vec![ResolvedType::String, ResolvedType::String]),
+            FileRead => Type::function(Type::STRING, Type::STRING),
+            StringSplit => Type::function(
+                Type::tuple(vec![Type::STRING, Type::STRING]),
+                Type::tuple(vec![Type::STRING, Type::STRING]),
             ),
-            StringParseInt => Function(box ResolvedType::String, box ResolvedType::Int),
-            StringGetFirst => Function(
-                box ResolvedType::String,
-                box ResolvedType::Tuple(vec![ResolvedType::String, ResolvedType::String]),
-            ),
-            Print => Function(box ResolvedType::String, box ResolvedType::Unit),
-            Printi => Function(box ResolvedType::Int, box ResolvedType::Unit),
+            StringParseInt => Type::function(Type::STRING, Type::INT),
+            StringGetFirst => {
+                Type::function(Type::STRING, Type::tuple(vec![Type::STRING, Type::STRING]))
+            }
+            Print => Type::function(Type::STRING, Type::UNIT),
+            Printi => Type::function(Type::INT, Type::UNIT),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum ExprT {
+    Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
     Lambda(String, Box<TypedExpr>),
-    StringLiteral(String),
+    BinaryOp(untyped::Operator, Box<TypedExpr>, Box<TypedExpr>),
+    MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
     Record(Vec<TypedExpr>),
-    ListConstructor(),
-    VariantConstructor(TypeHandle, usize),
-    Application(Box<TypedExpr>, Box<TypedExpr>),
-    Symbol(String),
+    Tuple(Vec<TypedExpr>),
+    Application(Box<TypedExpr>, Vec<TypedExpr>),
     FieldAccess(Box<TypedExpr>, usize),
     LetBinding(String, Box<TypedExpr>, Box<TypedExpr>),
-    Tuple(Vec<TypedExpr>),
-    Unit,
-    MatchSum(Box<TypedExpr>, Vec<(usize, Option<String>, TypedExpr)>),
-    BinaryOp(untyped::Operator, Box<TypedExpr>, Box<TypedExpr>),
+    Symbol(String),
+    VariantConstructor(TypeHandle, usize),
+    StringLiteral(String),
     IntegerLiteral(i64),
     BooleanLiteral(bool),
-    Conditional(Box<TypedExpr>, Box<TypedExpr>, Box<TypedExpr>),
     BuiltInFn(BuiltInFn),
+    Unit,
 }
 
-pub type TypedExpr = (ExprT, ResolvedType);
+pub type TypedExpr = (ExprT, Type);

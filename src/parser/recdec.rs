@@ -1,4 +1,4 @@
-use super::{Spanned, Token};
+use super::{Position, Span, Spanned, Token};
 use crate::ast::untyped::*;
 
 #[derive(Debug, Clone)]
@@ -177,7 +177,13 @@ impl Parser<'_> {
 
     pub fn parse_type_decl(&mut self) -> Result<TypeDeclaration, ParsingError> {
         self.expect_token(Token::Type)?;
+
         let ident = self.expect_identifier()?;
+
+        let mut type_parameters = Vec::new();
+        while let Some(_) = self.maybe_expect(&Token::Tick) {
+            type_parameters.push(self.expect_identifier()?);
+        }
 
         self.expect_token(Token::Equals)?;
 
@@ -203,15 +209,26 @@ impl Parser<'_> {
                     Token::Pipe,
                 )?;
 
-                Ok(TypeDeclaration::Sum(SumTypeDeclaration { variants, ident }))
+                Ok(TypeDeclaration {
+                    ident,
+                    type_parameters,
+                    definition: TypeDefinition::Sum { variants },
+                })
             }
-            Spanned(Token::LeftBrace, _) => Ok(TypeDeclaration::Record(RecordDeclaration {
+            Spanned(Token::LeftBrace, _) => Ok(TypeDeclaration {
                 ident,
-                fields: self.parse_record_fields()?,
-            })),
+                type_parameters,
+                definition: TypeDefinition::Record {
+                    fields: self.parse_record_fields()?,
+                },
+            }),
             _ => {
                 let ty = self.parse_type()?;
-                Ok(TypeDeclaration::TypeAlias(ident, ty))
+                Ok(TypeDeclaration {
+                    ident,
+                    type_parameters,
+                    definition: TypeDefinition::TypeAlias(ty),
+                })
             }
         }
     }
@@ -460,7 +477,13 @@ impl Parser<'_> {
                     }
 
                     let rhs = self.parse_expr_bp(12)?;
-                    lhs = Expr::Application(box lhs, box rhs);
+                    lhs = match lhs {
+                        Expr::Application(lhs, mut args) => {
+                            args.push(rhs);
+                            Expr::Application(lhs, args)
+                        }
+                        _ => Expr::Application(box lhs, vec![rhs]),
+                    };
 
                     continue;
                 }
@@ -498,8 +521,12 @@ impl Parser<'_> {
         Ok(lhs)
     }
 
-    pub fn parse_type(&mut self) -> Result<Ty, ParsingError> {
-        let lhs = match self.expect_next()?.clone() {
+    pub fn parse_type_atom(&mut self) -> Result<Ty, ParsingError> {
+        match self.expect_next()?.clone() {
+            Spanned(Token::Tick, _) => {
+                let ident = self.expect_identifier()?;
+                Ok(Ty::TypeVariable(ident))
+            }
             Spanned(Token::LeftParen, _) => {
                 // tuple
                 if self.maybe_expect(&Token::RightParen).is_some() {
@@ -536,10 +563,33 @@ impl Parser<'_> {
                     None
                 };
 
-                Ok(Ty::TypeRef(Spanned(i.clone(), span), attr))
+                let mut type_args = Vec::new();
+                loop {
+                    match self.peek() {
+                        Some(Spanned(Token::Minus, _))
+                        | Some(Spanned(Token::Comma, _))
+                        | Some(Spanned(Token::RightParen, _)) => break,
+                        Some(Spanned(_, next_span))
+                            if self.last_consumed.unwrap().1 .0 .0 == next_span.0 .0 =>
+                        {
+                            type_args.push(self.parse_type_atom()?)
+                        }
+                        _ => break,
+                    }
+                }
+
+                if type_args.len() == 0 {
+                    Ok(Ty::TypeRef(Spanned(i.clone(), span), attr))
+                } else {
+                    Ok(Ty::ConstructedType(Spanned(i.clone(), span), type_args))
+                }
             }
             t => Err(ParsingError::UnexpectedToken(t.clone(), None)),
-        }?;
+        }
+    }
+
+    pub fn parse_type(&mut self) -> Result<Ty, ParsingError> {
+        let lhs = self.parse_type_atom()?;
 
         if self.maybe_expect(&Token::Minus).is_some() {
             self.expect_token(Token::Greater)?;

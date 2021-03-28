@@ -31,7 +31,16 @@ impl Interpreter {
     }
 
     pub fn call_fn(&mut self, f: &str) {
-        let (e, _t) = self.program.bindings.get(f).unwrap();
+        let (e, _t) = {
+            let env = self.program.environment.borrow();
+
+            env.root_scope
+                .bindings
+                .get(f)
+                .expect(&format!("function not found: {}", f))
+                .clone()
+        };
+
         if let ExprT::Lambda(_p, body) = e.clone() {
             self.eval_expr(&body)
         } else {
@@ -152,7 +161,7 @@ impl Interpreter {
                         }
                     }
 
-                    panic!()
+                    panic!("{:?}, {:?}", arms, vi)
                 } else {
                     panic!()
                 }
@@ -160,33 +169,35 @@ impl Interpreter {
             ExprT::Application(lhs, rhs) => {
                 self.eval_expr(lhs);
 
-                let top = self.pop_val();
-                if let Some(Value::Function(p, curried, body)) = top {
-                    // scoping
-                    self.eval_expr(rhs);
-                    let rv = self.pop_val().unwrap();
-                    let bindings_tmp = self.bindings.clone();
-                    self.bindings.clear();
+                for expr in rhs {
+                    let top = self.pop_val();
+                    if let Some(Value::Function(p, curried, body)) = top {
+                        // scoping
+                        self.eval_expr(expr);
+                        let rv = self.pop_val().unwrap();
+                        let bindings_tmp = self.bindings.clone();
+                        self.bindings.clear();
 
-                    for (i, e) in curried.clone() {
-                        self.bindings.insert(i, e);
+                        for (i, e) in curried.clone() {
+                            self.bindings.insert(i, e);
+                        }
+                        self.bindings.insert((*p).clone(), rv);
+
+                        self.eval_expr(unsafe { &*body });
+
+                        self.bindings = bindings_tmp;
+                    } else if let Some(Value::VariantConstructorFn(th, vi)) = top {
+                        self.eval_expr(expr);
+                        let rv = self.pop_val().unwrap();
+                        self.push_val(Value::Variant(th.clone(), vi, Rc::new(rv)));
+                    } else if let Some(Value::BuiltInFn(f)) = top {
+                        self.eval_expr(expr);
+                        let argv = self.pop_val().unwrap();
+                        self.call_builtin(f, argv);
+                    } else {
+                        dbg!(lhs, top, &self.stack, &self.bindings);
+                        panic!("Not good")
                     }
-                    self.bindings.insert((*p).clone(), rv);
-
-                    self.eval_expr(unsafe { &*body });
-
-                    self.bindings = bindings_tmp;
-                } else if let Some(Value::VariantConstructorFn(th, vi)) = top {
-                    self.eval_expr(rhs);
-                    let rv = self.pop_val().unwrap();
-                    self.push_val(Value::Variant(th.clone(), vi, Rc::new(rv)));
-                } else if let Some(Value::BuiltInFn(f)) = top {
-                    self.eval_expr(rhs);
-                    let argv = self.pop_val().unwrap();
-                    self.call_builtin(f, argv);
-                } else {
-                    dbg!(lhs, &self.stack, &self.bindings);
-                    panic!("Not good")
                 }
             }
             ExprT::Lambda(p, body) => {
@@ -207,23 +218,30 @@ impl Interpreter {
                 }
             }
             ExprT::Symbol(s) => {
-                if let Some(b) = self.program.bindings.get(s) {
-                    if let (ExprT::Lambda(p, body), _) = b {
-                        self.push_val(Value::Function(
-                            Rc::new(p.clone()),
-                            vec![],
-                            body.as_ref() as *const TypedExpr,
-                        ));
-                    } else if let (ExprT::BuiltInFn(f), _) = b {
-                        self.push_val(Value::BuiltInFn(*f));
+                let val = {
+                    let env = self.program.environment.borrow();
+
+                    let b = env.root_scope.bindings.get(s);
+
+                    if let Some(b) = b {
+                        if let (ExprT::Lambda(p, body), _) = b {
+                            Value::Function(
+                                Rc::new(p.clone()),
+                                vec![],
+                                body.as_ref() as *const TypedExpr,
+                            )
+                        } else if let (ExprT::BuiltInFn(f), _) = b {
+                            Value::BuiltInFn(*f)
+                        } else {
+                            panic!()
+                        }
+                    } else if let Some(b) = self.bindings.get(s).cloned() {
+                        b
                     } else {
-                        panic!()
+                        panic!("{:?}", s)
                     }
-                } else if let Some(b) = self.bindings.get(s).cloned() {
-                    self.push_val(b);
-                } else {
-                    panic!()
-                }
+                };
+                self.push_val(val);
             }
             ExprT::Record(fields) => {
                 let mut r = Vec::new();
@@ -272,21 +290,19 @@ impl Interpreter {
                 self.push_val(Value::String(Rc::new(s.clone())));
             }
             ExprT::IntegerLiteral(i) => self.push_val(Value::Integer(*i)),
-            ExprT::ListConstructor() => {
-                self.push_val(Value::Tuple(vec![]));
-            }
             ExprT::VariantConstructor(th, vi) => {
                 let t = self.program.environment.borrow().types[th.index].clone();
                 if let TypeDefinition::Sum { variants, .. } = t {
                     let (_n, vt) = &variants[*vi];
-                    if let ResolvedType::Unit = vt {
-                        self.push_val(Value::Variant(th.clone(), *vi, Rc::new(Value::Unit)));
-                    } else {
+                    {
                         self.push_val(Value::VariantConstructorFn(th.clone(), *vi));
                     }
                 } else {
                     panic!()
                 }
+            }
+            ExprT::BuiltInFn(f) => {
+                self.push_val(Value::BuiltInFn(f.clone()));
             }
             ExprT::FieldAccess(lhs, i) => {
                 self.eval_expr(lhs);

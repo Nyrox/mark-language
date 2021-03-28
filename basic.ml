@@ -1,5 +1,4 @@
-type Span = (Int, Int, ())
-//type Spanned 't = ('t, Span)
+// type Span = (Int, Int, ())
 
 type TypeKind =
   | I32
@@ -15,7 +14,7 @@ closed typeclass Expr<Phase: Parsed | TypeChecked> begin
 
 	type FuncCall = {
 		ident: String,
-		params: String[],
+		params: String,
 		[TypeChecked]
 		retType: TypeKind
 	}
@@ -23,11 +22,6 @@ closed typeclass Expr<Phase: Parsed | TypeChecked> begin
 	impl sourceSpan for FuncCall f = f.ident.1
 	impl exprType for FuncCall f = f.retType
 end
-
-typecheck :: Expr<Parsed> -> Expr<TypeChecked>
-typecheck expr =
-	{ ident: "bruh", retType: TypeKind.I32, params: [] }
-
 
 test_curry :: String -> String -> () -> (String, String)
 test_curry a b =
@@ -58,7 +52,7 @@ type SList =
 	| End
 
 main_slists () =
-	let list = SList.Cons ("mor", SList.Cons ("din", SList.End))
+	let list = SList.Cons ("mor", SList.Cons ("din", SList.End ()))
 	list
 
 
@@ -98,9 +92,24 @@ apply oplist init =
 	| Cons cons -> apply cons.1 (apply_op cons.0 init)
 	| Nil -> init
 
-// main () =
-// 	let ops = OpList.Cons (Op.Add 5, OpList.Cons (Op.Sub 3, OpList.Cons (Op.Add 7, OpList.Nil)))
-// 	apply ops 10
+
+type List 'a =
+	| Cons of ('a, List 'a)
+	| Nil
+
+map :: ('a -> 'b) -> List 'a -> List 'b
+map f list =
+	match list with
+	| Cons a ->
+		List.Cons (f a.0, map f a.1)
+	| Nil ->
+		List.Nil ()
+
+main () =
+	let someList = List.Cons (7, List.Cons (5, List.Nil ()))
+	map (\x -> printi x) someList
+
+
 
 
 
