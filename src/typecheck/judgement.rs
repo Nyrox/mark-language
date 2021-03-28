@@ -1,5 +1,5 @@
-use super::TypeCheckingError;
-use crate::ast::typed::{Constraint, TypedExpr};
+use super::{constraints::Constraint, constraints::TypeSet, TypeCheckingError};
+use crate::ast::typed::TypedExpr;
 
 use std::iter::FromIterator;
 use std::ops::Try;
@@ -72,6 +72,19 @@ impl<T1> TypeJudgement<T1> {
                     constraints: nc,
                 }
             }
+            TypeJudgement::Error(e) => TypeJudgement::Error(e),
+        }
+    }
+
+    pub fn map_with_constraints_and_fail<T2, F>(self, f: F) -> TypeJudgement<T2>
+    where
+        F: FnOnce(T1, Vec<Constraint>) -> Result<(T2, Vec<Constraint>), TypeCheckingError>,
+    {
+        match self {
+            TypeJudgement::Typed { inner, constraints } => match f(inner, constraints) {
+                Ok((inner, constraints)) => TypeJudgement::Typed { inner, constraints },
+                Err(e) => TypeJudgement::Error(e),
+            },
             TypeJudgement::Error(e) => TypeJudgement::Error(e),
         }
     }
@@ -191,11 +204,12 @@ impl<T> Try for TypeJudgement<T> {
     }
 }
 
-
 impl TypeJudgement<TypedExpr> {
-    fn solve_constraints(self) -> TypeJudgement<(TypedExpr, TypeSet)> {
-        let typeset = super::constraints::solve(self.constraints);
-        let expr = super::constraints::apply_typeset(self.inner);
-        (expr, typeset)
+    pub fn solve_constraints(self) -> TypeJudgement<(TypedExpr, TypeSet)> {
+        self.map_with_constraints_and_fail(|expr, constraints| {
+            let typeset = super::constraints::solve(constraints.clone())?;
+            let expr = super::constraints::apply_typeset(expr, &typeset);
+            Ok(((expr, typeset), constraints))
+        })
     }
 }

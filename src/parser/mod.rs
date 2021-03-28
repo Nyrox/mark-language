@@ -16,6 +16,10 @@ impl Span {
     pub fn encompass(self, other: Span) -> Span {
         Self(self.0.min(other.0), self.1.max(other.1))
     }
+
+    pub fn empty() -> Span {
+        Self(Position(0, 0), Position(0, 0))
+    }
 }
 
 impl<T: Copy> Copy for Spanned<T> {}

@@ -15,6 +15,7 @@ pub mod judgement;
 use judgement::*;
 
 pub mod constraints;
+use constraints::Constraint;
 
 #[derive(Debug, Clone)]
 pub enum TypeCheckingError {
@@ -976,7 +977,8 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
                             dbg!(&ident, &c);
                             (i, c)
                         })
-                        .map(|(e, t)| {
+                        .solve_constraints()
+                        .map(|((e, t), ts)| {
                             checking_context
                                 .environment
                                 .borrow_mut()
@@ -992,7 +994,8 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
                             dbg!(&ident, &c);
                             (i, c)
                         })
-                        .map(|(e, t)| {
+                        .solve_constraints()
+                        .map(|((e, t), ts)| {
                             checking_context
                                 .environment
                                 .borrow_mut()
