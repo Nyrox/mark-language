@@ -129,6 +129,12 @@ pub enum Type {
     ErrType, // indicates that type checking failed
 }
 
+#[derive(Clone, PartialEq, Eq)]
+pub enum Kind {
+    TypeSchema(Vec<String>, Type),
+    Type(Type),
+}
+
 impl Debug for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
