@@ -76,7 +76,7 @@ impl Interpreter {
             }
             BuiltInFn::StringParseInt => {
                 if let Value::String(s) = arg {
-                    self.push_val(Value::Integer(s.parse::<i64>().unwrap()));
+                    self.push_val(Value::Integer(s.parse().unwrap()));
                 } else {
                     panic!()
                 }

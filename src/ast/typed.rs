@@ -55,9 +55,11 @@ pub struct TypeEnvironment {
     pub types: Vec<TypeDefinition>,
 }
 
+
+
 #[derive(Clone, Debug, Default)]
 pub struct Scope {
-    pub bindings: HashMap<String, TypedExpr>,
+    pub bindings: HashMap<String, Kind>,
     pub type_constructors: HashMap<String, TypeConstructor>,
 }
 
