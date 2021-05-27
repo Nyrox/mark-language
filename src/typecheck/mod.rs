@@ -1,4 +1,7 @@
-use crate::ast::{typed::{self, TypeEnvironment}, untyped};
+use crate::ast::{
+    typed::{self, TypeEnvironment},
+    untyped,
+};
 use crate::ast::{
     typed::{Kind, Type},
     untyped::{Declaration, Ty},
@@ -10,9 +13,7 @@ use std::rc::Rc;
 
 pub type Substitutions = Vec<(String, Type)>;
 
-pub enum TypeCheckingError {
-
-}
+pub enum TypeCheckingError {}
 
 pub enum TContext {
     Binding {
@@ -32,7 +33,11 @@ impl TContext {
         match self {
             TContext::Empty => None,
             TContext::Binding { name, kind, cons } => {
-                if name == symbol { Some(kind.clone()) } else { cons.lookup(symbol) }
+                if name == symbol {
+                    Some(kind.clone())
+                } else {
+                    cons.lookup(symbol)
+                }
             }
         }
     }
@@ -54,15 +59,27 @@ impl TypeChecker {
     }
 
     pub fn lookup_in_context(&self, ctx: TContext, symbol: &str) -> Option<Kind> {
-        ctx.lookup(symbol)
-            .or_else(|| self.environment.root_scope.bindings.get(symbol).map(|(e, t)| t)
+        ctx.lookup(symbol).or_else(|| {
+            self.environment
+                .root_scope
+                .bindings
+                .get(symbol)
+                .map(|(e, t)| t)
+        })
     }
 
-    pub fn typecheck(&mut self, ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingError>> {
+    pub fn typecheck(
+        &mut self,
+        ast: untyped::Untyped,
+    ) -> Result<TypeChecked, Vec<TypeCheckingError>> {
         for d in ast.declarations.iter() {
             match d {
                 Declaration::TypeAnnotation(sym, ty) => {
-                    self.global_context = TContext::binding(sym.to_string(), self.resolve_type(ty), box self.global_context);
+                    self.global_context = TContext::binding(
+                        sym.to_string(),
+                        self.resolve_type(ty),
+                        box self.global_context,
+                    );
                 }
 
                 _ => panic!(),
@@ -70,25 +87,29 @@ impl TypeChecker {
         }
 
         Ok(TypeChecked {
-            environment: self.environment
+            environment: self.environment,
         })
     }
 
     pub fn resolve_type(&mut self, ty: &untyped::Ty) -> Kind {
-        match ty {
-            Ty::Tuple(tys) => Type::tuple(tys.iter().map(|t| self.resolve_type(t)).collect()),
-            _ => panic!(),
+        fn resolve_inner(this: &mut Self, type_vars: &mut Vec<String>, ty: &untyped::Ty) -> Kind {
+            match ty {
+                Ty::Tuple(tys) => Kind::Type(Type::tuple(
+                    tys.iter()
+                        .map(|t| this.resolve_inner(type_vars, t))
+                        .collect(),
+                )),
+                _ => panic!(),
+            }
         }
     }
-    
+
     pub fn infer(&mut self, expr: untyped::Expr) -> (typed::TypedExpr, Substitutions) {
         match expr {
             _ => unimplemented!(),
         }
     }
 }
-
-
 
 pub struct TypeChecked {
     pub environment: TypeEnvironment,
@@ -101,7 +122,6 @@ impl TypeChecked {
         }
     }
 }
-
 
 pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingError>> {
     let mut type_checker = TypeChecker::new();
