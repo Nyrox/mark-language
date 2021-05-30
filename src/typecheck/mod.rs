@@ -13,8 +13,11 @@ use std::rc::Rc;
 
 pub type Substitutions = Vec<(String, Type)>;
 
+
+#[derive(Clone, Debug)]
 pub enum TypeCheckingError {}
 
+#[derive(Clone, Debug)]
 pub enum TContext {
     Binding {
         name: String,
@@ -64,7 +67,7 @@ impl TypeChecker {
                 .root_scope
                 .bindings
                 .get(symbol)
-                .map(|(e, t)| t)
+                .map(|(e, t)| t.clone())
         })
     }
 
@@ -92,16 +95,19 @@ impl TypeChecker {
     }
 
     pub fn resolve_type(&mut self, ty: &untyped::Ty) -> Kind {
-        fn resolve_inner(this: &mut Self, type_vars: &mut Vec<String>, ty: &untyped::Ty) -> Kind {
+        fn resolve_inner(this: &mut TypeChecker, type_vars: &mut Vec<String>, ty: &untyped::Ty) -> Type {
             match ty {
-                Ty::Tuple(tys) => Kind::Type(Type::tuple(
+                Ty::Tuple(tys) => Type::tuple(
                     tys.iter()
-                        .map(|t| this.resolve_inner(type_vars, t))
+                        .map(|t| resolve_inner(this, type_vars, t))
                         .collect(),
-                )),
+                ),
                 _ => panic!(),
             }
-        }
+		}
+
+		let type_vars = Vec::new();
+		resolve_inner(self, &mut type_vars, ty)
     }
 
     pub fn infer(&mut self, expr: untyped::Expr) -> (typed::TypedExpr, Substitutions) {
@@ -111,6 +117,7 @@ impl TypeChecker {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct TypeChecked {
     pub environment: TypeEnvironment,
 }

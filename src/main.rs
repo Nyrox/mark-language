@@ -3,6 +3,11 @@
 #![feature(iterator_fold_self)]
 #![feature(try_trait)]
 
+
+#![allow(unused_imports)]
+#![allow(incomplete_features)]
+
+
 pub mod parser;
 
 use parser::Scanner;

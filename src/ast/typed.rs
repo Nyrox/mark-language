@@ -57,7 +57,7 @@ pub struct TypeEnvironment {
 
 #[derive(Clone, Debug, Default)]
 pub struct Scope {
-    pub bindings: HashMap<String, Kind>,
+    pub bindings: HashMap<String, KindedExpr>,
     pub type_constructors: HashMap<String, TypeConstructor>,
 }
 
@@ -129,7 +129,7 @@ pub enum Type {
     ErrType, // indicates that type checking failed
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Kind {
     TypeSchema(Vec<String>, Type),
     Type(Type),
@@ -249,3 +249,4 @@ pub enum ExprT {
 }
 
 pub type TypedExpr = (ExprT, Type);
+pub type KindedExpr = (ExprT, Kind);
