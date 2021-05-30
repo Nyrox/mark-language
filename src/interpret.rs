@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, rc::Rc, borrow::Borrow};
+use std::{borrow::Borrow, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::{ast::typed::TypedExpr, ast::typed::*, typecheck::TypeChecked};
 

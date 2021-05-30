@@ -13,7 +13,6 @@ use std::rc::Rc;
 
 pub type Substitutions = Vec<(String, Type)>;
 
-
 #[derive(Clone, Debug)]
 pub enum TypeCheckingError {}
 
@@ -78,36 +77,60 @@ impl TypeChecker {
         for d in ast.declarations.iter() {
             match d {
                 Declaration::TypeAnnotation(sym, ty) => {
-                    self.global_context = TContext::binding(
+                    let nc = TContext::binding(
                         sym.to_string(),
-                        self.resolve_type(ty),
-                        box self.global_context,
+                        dbg!(self.resolve_type(ty)),
+                        Box::new(std::mem::replace(&mut self.global_context, TContext::Empty)),
                     );
+                    self.global_context = nc;
                 }
-
-                _ => panic!(),
+                Declaration::Binding(name, expr) => {
+                    
+                }
+                _ => panic!("{:#?}", d),
             }
         }
 
         Ok(TypeChecked {
-            environment: self.environment,
+            environment: self.environment.clone(),
         })
     }
 
     pub fn resolve_type(&mut self, ty: &untyped::Ty) -> Kind {
-        fn resolve_inner(this: &mut TypeChecker, type_vars: &mut Vec<String>, ty: &untyped::Ty) -> Type {
+        fn resolve_inner(
+            this: &mut TypeChecker,
+            type_vars: &mut Vec<String>,
+            ty: &untyped::Ty,
+        ) -> Type {
             match ty {
                 Ty::Tuple(tys) => Type::tuple(
                     tys.iter()
                         .map(|t| resolve_inner(this, type_vars, t))
                         .collect(),
                 ),
-                _ => panic!(),
+                Ty::Func(from, to) => Type::function(
+                    resolve_inner(this, type_vars, from),
+                    resolve_inner(this, type_vars, to),
+                ),
+                Ty::TypeVariable(tv) => {
+                    if let Some((i, e)) = type_vars
+                        .iter()
+                        .enumerate()
+                        .find(|(i, e)| e.as_str() == tv.0.as_str())
+                    {
+                        Type::TypeVariable(i as u32)
+                    } else {
+                        type_vars.push(tv.0.clone());
+                        Type::TypeVariable(type_vars.len() as u32)
+                    }
+                }
+                _ => panic!("{:#?}", ty),
             }
-		}
+        }
 
-		let type_vars = Vec::new();
-		resolve_inner(self, &mut type_vars, ty)
+        let mut type_vars = Vec::new();
+        let tt = resolve_inner(self, &mut type_vars, ty);
+        Kind::TypeSchema(type_vars, tt)
     }
 
     pub fn infer(&mut self, expr: untyped::Expr) -> (typed::TypedExpr, Substitutions) {
