@@ -1,5 +1,7 @@
+use std::{error::Error, fmt::Display};
+
 use super::{Position, Span, Spanned, Token};
-use crate::ast::untyped::*;
+use crate::ast::untyped::{self, *};
 
 #[derive(Debug, Clone)]
 pub enum ParsingError {
@@ -14,6 +16,15 @@ pub struct Parser<'a> {
     ast: Untyped,
     last_consumed: Option<&'a Spanned<Token>>,
 }
+
+impl Display for ParsingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as std::fmt::Debug>::fmt(&self, f)
+    }
+}
+
+impl Error for ParsingError {}
+
 
 type ParseFn<T> = fn(&mut Parser) -> Result<T, ParsingError>;
 
@@ -106,7 +117,7 @@ impl Parser<'_> {
 
 /// Parser rules
 impl Parser<'_> {
-    pub fn parse(mut self) -> Result<Untyped, ParsingError> {
+    pub fn parse_all(mut self) -> Result<Untyped, ParsingError> {
         loop {
             if self.remaining.len() == 0 {
                 break;
@@ -369,6 +380,7 @@ impl Parser<'_> {
                 let ident = self.expect_identifier()?;
                 self.expect_token(Token::Equals)?;
                 let bind_val = self.parse_expr()?;
+                self.expect_token(Token::In)?;
                 let body = self.parse_expr()?;
                 return Ok(Expr::LetBinding(ident, box bind_val, box body));
             }

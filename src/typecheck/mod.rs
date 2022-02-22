@@ -8,7 +8,7 @@ use crate::{
     parser::Spanned,
 };
 
-use std::cell::RefCell;
+use std::{cell::RefCell, fmt::Display, error::Error};
 use std::{collections::HashMap, rc::Rc};
 
 pub mod judgement;
@@ -31,6 +31,15 @@ pub enum TypeCheckingError {
     InferenceFailed(Span),
     ExprHasErrorType(Span),
 }
+
+impl Display for TypeCheckingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as std::fmt::Debug>::fmt(&self, f)
+    }
+}
+
+impl Error for TypeCheckingError {}
+
 
 impl TypeCheckingError {
     pub fn compound(self, other: TypeCheckingError) -> TypeCheckingError {
@@ -461,7 +470,7 @@ fn bump_generic_counters(expr: TypedExpr) -> TypedExpr {
         }
     }
 
-    fn impl_rec((e, mut t): TypedExpr, bump: u32) -> (TypedExpr, u32) {
+    fn impl_rec((mut e, mut t): TypedExpr, bump: u32) -> (TypedExpr, u32) {
         use ExprT::*;
 
         match e {
@@ -475,7 +484,12 @@ fn bump_generic_counters(expr: TypedExpr) -> TypedExpr {
                 let u = bump_in_type(&mut t, bump);
                 ((e, t), u)
             }
-            _ => unimplemented!(),
+            Lambda(_, ref mut body) => {
+                let u = bump_in_type(&mut body.1, bump);
+                let u = bump_in_type(&mut t, u);
+                ((e, t), u)
+            }
+            _ => unimplemented!("{:?}", e),
         }
     }
 
@@ -508,65 +522,11 @@ fn infer_type(ctx: &mut TypecheckingContext, expr: &untyped::Expr) -> TypeJudgem
             use untyped::Operator;
             infer_type(ctx, lhs)
                 .and_still(|| infer_type(ctx, rhs))
-                .map_with_fail(|(lhs, rhs)| {
-                    let tcs = lhs.1.type_constructor().zip(rhs.1.type_constructor());
-                    match tcs {
-                        Some((TypeConstructor::Int, TypeConstructor::Int)) => match op {
-                            Operator::BinOpMul
-                            | Operator::BinOpAdd
-                            | Operator::BinOpSub
-                            | Operator::BinOpDiv
-                            | Operator::BinOpMod => {
-                                Ok((ExprT::BinaryOp(*op, box lhs, box rhs), Type::INT))
-                            }
-                            Operator::BinOpLess
-                            | Operator::BinOpLessEq
-                            | Operator::BinOpGreater
-                            | Operator::BinOpGreaterEq
-                            | Operator::BinOpEquals => {
-                                Ok((ExprT::BinaryOp(*op, box lhs, box rhs), Type::BOOL))
-                            }
-                            _ => Err(TypeCheckingError::GenericError(
-                                format!(
-                                    "Binary Operator {:?} is not defined for types {:?}, {:?}",
-                                    *op, lhs.1, rhs.1
-                                ),
-                                expr.span(),
-                            )),
-                        },
-                        Some((TypeConstructor::String, TypeConstructor::String)) => match op {
-                            Operator::BinOpEquals => {
-                                Ok((ExprT::BinaryOp(*op, box lhs, box rhs), Type::BOOL))
-                            }
-                            _ => Err(TypeCheckingError::GenericError(
-                                format!(
-                                    "Binary Operator {:?} is not defined for types {:?}, {:?}",
-                                    *op, lhs.1, rhs.1
-                                ),
-                                expr.span(),
-                            )),
-                        },
-                        Some((TypeConstructor::Bool, TypeConstructor::Bool)) => match op {
-                            Operator::BinOpAnd | Operator::BinOpOr => {
-                                Ok((ExprT::BinaryOp(*op, box lhs, box rhs), Type::BOOL))
-                            }
-                            _ => Err(TypeCheckingError::GenericError(
-                                format!(
-                                    "Binary Operator {:?} is not defined for types {:?}, {:?}",
-                                    *op, lhs.1, rhs.1
-                                ),
-                                expr.span(),
-                            )),
-                        },
-                        _ => Err(TypeCheckingError::GenericError(
-                            format!(
-                                "Binary Operator {:?} is not defined for types {:?}, {:?}",
-                                *op, lhs.1, rhs.1
-                            ),
-                            expr.span(),
-                        )),
-                    }
+                .then(|(lhs, rhs)| {
+                    let unifiedT = unify_types(Span::empty(), lhs.1.clone(), rhs.1.clone());
+                    unifiedT.map(|finalT| (ExprT::BinaryOp(*op, box lhs.clone(), box rhs.clone()), finalT))
                 })
+                .map(|((_, _), binOpType)| binOpType)
         }
         Expr::LetBinding(binding, rhs, body) => {
             let rhs = infer_type(ctx, rhs);
@@ -925,7 +885,7 @@ pub fn generate_closed_typeclass_instance(
     };
 }
 
-pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingError>> {
+pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, TypeCheckingError> {
     let mut checking_context = TypecheckingContext::new();
 
     let builtins = &[
@@ -1015,7 +975,7 @@ pub fn typecheck(ast: untyped::Untyped) -> Result<TypeChecked, Vec<TypeCheckingE
     }
 
     if errors.len() > 0 {
-        Err(errors)
+        Err(TypeCheckingError::CompoundError(errors))
     } else {
         Ok(TypeChecked {
             environment: checking_context.environment,

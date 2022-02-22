@@ -1,46 +1,77 @@
 #![feature(box_syntax)]
 #![feature(let_chains)]
 #![feature(iterator_fold_self)]
-#![feature(try_trait)]
+#![feature(try_trait_v2)]
 
 pub mod parser;
 
 use parser::Scanner;
-
 pub mod ast;
 
 pub mod interpret;
 pub mod typecheck;
 
-fn main() {
-    // let file = std::fs::read_to_string("examples/aoc2020/day3/main.ml").unwrap();
-    // std::env::set_current_dir("examples/aoc2020/day3").unwrap();
+use std::{error::Error, borrow::Borrow};
 
-    let file = std::fs::read_to_string("basic.ml").unwrap();
+use linefeed::{Interface, ReadResult};
 
+use crate::{
+    ast::untyped::Declaration,
+    parser::{Span, Spanned},
+};
+
+fn repl() -> Result<(), Box<dyn Error>> {
+    let mut reader = Interface::new("my-application")?;
+
+    reader.set_prompt("mark-lang> ")?;
+
+    let mut inputString = String::new();
+    while let ReadResult::Input(input) = reader.read_line()? {
+        inputString.push_str(&input);
+        inputString.push('\n');
+        if !input.contains(';') { continue; }
+        let (input, _) = inputString.split_at(inputString.find(';').unwrap());
+        let mut readLine = || -> Result<(), Box<dyn Error>> {
+
+
+            match input {
+                "quit" | "exit" => std::process::exit(0),
+                _ if input.starts_with("eval ") => {
+                    let tokens = Scanner::new(input.chars().skip(5)).scan_all()?;
+                    let ast = parser::Parser::new(&tokens).parse_expr()?;
+                    let ast = ast::untyped::Untyped {
+                        declarations: vec![Declaration::Binding(
+                            Spanned("main".into(), Span::empty()),
+                            ast::untyped::Expr::Lambda(Spanned("()".into(), Span::empty()), box ast),
+                        )],
+                    };
+                    let typechecked = typecheck::typecheck(ast)?;
+
+                    println!("{:?}", (*typechecked.environment).borrow().root_scope.bindings.get("main").unwrap().1);
+                    interpret::interpret(typechecked);
+                }
+                _ => {
+                    let tokens = Scanner::new(input.chars()).scan_all()?;
+                    let ast = parser::Parser::new(&tokens).parse_all()?;
+
+                    let _typechecked = typecheck::typecheck(ast)?;
+                }
+            }
+
+            Ok(())
+        };
+
+        println!("{:?}", readLine());
+        inputString.clear();
+    }
+
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
     let thread = std::thread::Builder::new().stack_size(32 * 1024 * 1024);
 
-    let runner = thread
-        .spawn(move || {
-            let tokens = Scanner::new(file.chars()).scan_all().unwrap();
+    let runner = thread.spawn(move || repl().unwrap()).unwrap();
 
-            let ast = parser::Parser::new(&tokens).parse().unwrap();
-
-            std::fs::write("ast.ron", format!("{:#?}", &ast)).ok();
-
-            let typechecked = match typecheck::typecheck(ast) {
-                Ok(t) => t,
-                Err(errs) => {
-                    dbg!(errs);
-                    return;
-                }
-            };
-
-            std::fs::write("typed_ast.ron", format!("{:#?}", &typechecked)).ok();
-
-            interpret::interpret(typechecked);
-        })
-        .unwrap();
-
-    runner.join().unwrap()
+    Ok(runner.join().unwrap())
 }

@@ -2,7 +2,7 @@ use super::{constraints::Constraint, constraints::TypeSet, TypeCheckingError};
 use crate::ast::typed::TypedExpr;
 
 use std::iter::FromIterator;
-use std::ops::Try;
+use std::ops::{Try, ControlFlow};
 
 pub enum TypeJudgement<T> {
     Typed {
@@ -185,24 +185,32 @@ impl<T> FromIterator<TypeJudgement<T>> for TypeJudgement<Vec<T>> {
 }
 
 impl<T> Try for TypeJudgement<T> {
-    type Ok = (T, Vec<Constraint>);
-    type Error = TypeCheckingError;
+    type Output = (T, Vec<Constraint>);
+    type Residual = TypeJudgement<std::convert::Infallible>;
 
-    fn into_result(self) -> Result<Self::Ok, TypeCheckingError> {
+    fn from_output(output: Self::Output) -> Self {
+        let (inner, constraints) = output;
+        TypeJudgement::Typed { constraints, inner }
+    }
+
+    fn branch(self) -> std::ops::ControlFlow<Self::Residual, Self::Output> {
         match self {
-            TypeJudgement::Typed { inner, constraints } => Ok((inner, constraints)),
-            TypeJudgement::Error(e) => Err(e),
+            TypeJudgement::Typed { inner, constraints } => ControlFlow::Continue((inner, constraints)),
+            TypeJudgement::Error(e) => ControlFlow::Break(TypeJudgement::Error(e))
         }
     }
+}
 
-    fn from_ok((inner, constraints): Self::Ok) -> Self {
-        TypeJudgement::Typed { inner, constraints }
-    }
-
-    fn from_error(err: TypeCheckingError) -> Self {
-        TypeJudgement::Error(err)
+impl<T> std::ops::FromResidual for TypeJudgement<T> {
+    fn from_residual(residual: TypeJudgement<std::convert::Infallible>) -> Self {
+        match residual {
+            TypeJudgement::Error(e) => TypeJudgement::Error(e),
+            TypeJudgement::Typed { inner, .. } => match inner {}
+        }
     }
 }
+
+
 
 impl TypeJudgement<TypedExpr> {
     pub fn solve_constraints(self) -> TypeJudgement<(TypedExpr, TypeSet)> {

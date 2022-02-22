@@ -126,7 +126,7 @@ impl Expr {
             Application(l, r) => l.span().encompass(
                 r.iter()
                     .map(|e| e.span())
-                    .fold_first(|s1, s2| s1.encompass(s2))
+                    .reduce(|s1, s2| s1.encompass(s2))
                     .unwrap(),
             ),
             ListConstructor() => Span(Position(0, 0), Position(0, 0)),
@@ -139,7 +139,7 @@ impl Expr {
             Tuple(fields) => fields
                 .iter()
                 .map(|e| e.span())
-                .fold_first(|s1, s2| s1.encompass(s2))
+                .reduce(|s1, s2| s1.encompass(s2))
                 .unwrap(),
             Match(expr, arms) => arms
                 .iter()

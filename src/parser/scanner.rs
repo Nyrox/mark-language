@@ -1,3 +1,5 @@
+use std::{error::Error, fmt::{Display, Debug}};
+
 use super::{Position, Span, Spanned, Token};
 
 #[derive(Debug, Clone)]
@@ -13,6 +15,14 @@ pub enum ScanningError {
     InvalidLiteral(Spanned<()>),
     UnexpectedEndOfFile,
 }
+
+impl Display for ScanningError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as Debug>::fmt(&self, f)
+    }
+}
+
+impl Error for ScanningError {}
 
 type ScanningResult = Result<ScanningProduct, ScanningError>;
 
@@ -71,7 +81,9 @@ impl<I: Iterator<Item = char>> Scanner<I> {
     pub fn keyword(&self, what: &str) -> Option<Token> {
         match what.to_owned().as_str() {
             "return" => Some(Token::Return),
+            "in" => Some(Token::In),
             "let" => Some(Token::Let),
+            "decl" => Some(Token::Def),
             "mut" => Some(Token::Mut),
             "if" => Some(Token::If),
             "else" => Some(Token::Else),
@@ -233,11 +245,11 @@ impl<I: Iterator<Item = char>> Scanner<I> {
         let mut text = String::new();
         text.push(begin);
 
-        while self.peek().unwrap().is_numeric() {
+        while self.peek().filter(|c| c.is_numeric()).is_some() {
             text.push(self.advance().unwrap());
         }
 
-        if self.peek().unwrap() == '.' {
+        if self.peek().filter(|c| *c == '.').is_some() {
             text.push(self.advance().unwrap());
             while self.peek().unwrap().is_numeric() {
                 text.push(self.advance().unwrap());

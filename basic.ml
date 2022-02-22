@@ -97,20 +97,39 @@ type List 'a =
 	| Cons of ('a, List 'a)
 	| Nil
 
-map :: ('a -> 'b) -> List 'a -> List 'b
-map f list =
+val map: ('a -> 'b) -> List 'a -> List 'b
+let map f list =
+	let x = someExpr in
 	match list with
 	| Cons a ->
 		List.Cons (f a.0, map f a.1)
 	| Nil ->
 		List.Nil ()
 
-main () =
+let main () =
 	let someList = List.Cons (7, List.Cons (5, List.Nil ()))
 	map (\x -> printi x) someList
 
 
+class T = ...
 
 
+foo :: 'a -> int
+foo ('a: Num) :: 'a -> 'a -> int
+foo ('a: Num, 'b: Num) :: 'a -> 'b -> int
+foo :: ^Num -> ^Num -> int
+
+foo :: T t => t -> int
+
+list :: IComparable[]
+map foo list
+
+&[T]
+
+(Num a, Num b) => a -> b
+
+Num -> Num
+
+fn(a: impl Display, b: impl Display) {}
 
 

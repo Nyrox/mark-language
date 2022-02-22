@@ -129,6 +129,8 @@ pub enum Type {
     ErrType, // indicates that type checking failed
 }
 
+pub type TypeScheme = (Vec<u32>, Type);
+
 impl Debug for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
