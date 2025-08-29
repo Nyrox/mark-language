@@ -31,7 +31,7 @@ end
 
 typecheck :: Expr<Parsed> -> Expr<TypeChecked>
 typecheck expr =
-	{ ident: "bruh", retType: TypeKind.I32, params: [] }
+	{ ident: "foo", retType: TypeKind.I32, params: [] }
 
 
 type Test2 = {
@@ -57,11 +57,11 @@ test_curry f c =
 
 main () =
 	let b =
-		let r = "cyka"
+		let r = "hello"
 		r
 
 	test_curry (\a ->
-		{ a: a, b: "blyat" }
+		{ a: a, b: "world" }
 	) b
 
 ```
